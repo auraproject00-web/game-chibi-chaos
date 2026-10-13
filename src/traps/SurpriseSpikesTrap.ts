@@ -17,6 +17,7 @@ export class SurpriseSpikesTrap implements Trap {
       hidden: true,
       triggerFrom: (cfg.trigger?.from ?? cfg.x - 0.5) * TILE,
       triggerTo: (cfg.trigger?.to ?? cfg.x + cfg.w + 0.5) * TILE,
+      warnMs: cfg.warnMs,
     });
     this.span = { left: cfg.x * TILE, right: (cfg.x + cfg.w) * TILE };
   }

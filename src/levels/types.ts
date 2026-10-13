@@ -1,3 +1,4 @@
+import type { LevelLines } from '../managers/trollLines';
 import type { TrapConfigWithId } from '../traps/types';
 
 /**
@@ -60,4 +61,6 @@ export interface LevelData {
   checkpoints?: PointDef[];
   finish: PointDef;
   hints?: HintDef[];
+  /** Narrator lines only this level uses (per intensity and key), tried before the shared ones. */
+  trollLines?: LevelLines;
 }

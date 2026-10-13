@@ -19,7 +19,8 @@ export type TrapConfig =
   | FakeCheckpointConfig
   | FallingPlatformConfig
   | MovingPlatformConfig
-  | FakeFinishConfig;
+  | FakeFinishConfig
+  | DecoyPortalConfig;
 
 export type TrapType = TrapConfig['type'];
 
@@ -45,6 +46,8 @@ export interface SurpriseSpikesConfig {
   w: number;
   /** Player-center range (tiles) that pops them. Default: the span plus half a tile. */
   trigger?: { from: number; to: number };
+  /** Spike warning: tips peek out this long (harmless) before the spikes shoot up. Default 0. */
+  warnMs?: number;
 }
 
 /** 3. The finish portal runs away when MOCHI gets close. It never runs back. */
@@ -137,6 +140,25 @@ export interface FakeFinishConfig {
   vanishX: number;
   /** Player center tile that reveals the real portal. */
   revealX: number;
+}
+
+/**
+ * 11. A look-alike finish portal (tells: spins the other way, pink glow) that springs a surprise
+ * when MOCHI's center passes `triggerX`. It never completes the level and resets on respawn.
+ */
+export interface DecoyPortalConfig {
+  type: 'decoyPortal';
+  /** Where it stands (ground row). */
+  x: number;
+  y: number;
+  triggerX: number;
+  /** `flee`: hops to `fleeTo` and vanishes, popping `spikes`. `drop`: its `floor` collapses. */
+  effect: 'flee' | 'drop';
+  fleeTo?: { x: number; y: number };
+  /** Hidden spikes (row defaults to `y`). `delayMs` after the trigger, then `warnMs` of peeking. */
+  spikes?: { x: number; y?: number; w: number; delayMs?: number; warnMs?: number };
+  /** Cracked ground under the decoy, top at row `y`. It wobbles `delayMs` (default 250) and falls. */
+  floor?: { x: number; w: number; h?: number; delayMs?: number };
 }
 
 /** What a trap may touch in the running game. */

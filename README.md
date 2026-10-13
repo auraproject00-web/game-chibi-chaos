@@ -61,7 +61,7 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 | type | What it does | How to beat it once learned |
 | --- | --- | --- |
 | `fakeFloor` | Cracked ground crumbles `delayMs` (default 350ms) after you land | Keep moving / jump over |
-| `surpriseSpikes` | Hidden spikes pop up under you, then stay visible | Jump over the spot |
+| `surpriseSpikes` | Hidden spikes pop up under you, then stay visible (optional `warnMs`: tips peek out first) | Jump over the spot |
 | `runningPortal` | The finish portal hops away when you get close | Follow it (it never comes back) |
 | `invisibleWall` | Unseen solid wall, shimmers into view after a bump | Jump over it |
 | `baitCoin` | Grabbing the coin pops spikes under it | Leave the coin alone |
@@ -70,6 +70,7 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 | `fallingPlatform` | Wooden plank drops shortly after you stand on it | Hop off quickly |
 | `movingPlatform` | Candy wafer that shuttles between two points and pauses at each end; carries MOCHI | Learn the rhythm |
 | `fakeFinish` | Decoy portal that hops away and vanishes; the real portal is hidden until `revealX` | Keep going past the decoy |
+| `decoyPortal` | Look-alike portal (spins the other way, pink glow): `flee` hops away and pops spikes, `drop` makes its cracked ground fall | Learn the tells, jump past it |
 
 Example: `{ type: 'baitCoin', x: 32, y: 11, spikes: { x: 31, y: 14, w: 3 } }`.
 Use only a few trap types per level and introduce them one at a time. Every trap fires at the same
@@ -77,14 +78,19 @@ spot every run; there is no randomness. Deaths are unlimited: MOCHI respawns at 
 and the death counter goes up.
 
 In dev (`npm run dev`), open `/?traplab` to play a test level with one of each trap, or `/?level=N`
-to jump straight into level N (dev only, ignores locks).
+to jump straight into level N (dev only, ignores locks); add `&cp=M` to start at its M-th checkpoint.
 
 ## Levels
 
 1. **Hello Mochi!** (meadow): the basics and the first traps.
-2. **Trust Issues** (Candy Meadow, unlocked by finishing Level 1): an intro fake floor, a bait coin,
-   a fake checkpoint between real ones, two moving wafers around an island with hidden spikes, and a
-   finish portal that runs away and vanishes before the real one appears.
+2. **Trust Issues** (Candy Meadow, Nightmare 8/10, unlocked by finishing Level 1): False Confidence
+   (steps, a cracked step to hop off at once, hidden spikes), Double Betrayal (spikes whose landing
+   spot hides a second row that peeks out first, a bait coin that spikes the next ledge), Precision
+   Panic (small pillars, a wafer to a collapsing plank, a rising wafer), Checkpoint Mind Game (a
+   swaying crooked fake flag between real ones) and Triple Fake Finish (two look-alike portals with
+   different surprises before the real one on top of three pillars). All tuning numbers (gaps,
+   widths, delays, speeds, warning time) are in `L2` at the top of `src/levels/level02.ts`, next to
+   MOCHI's jump reach worked out from the real physics.
 
 ## Death reactions
 

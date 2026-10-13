@@ -37,6 +37,8 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:fakeCheckpoint': ['Ups, bendera itu bohongan. Yang asli tegak lurus~'],
     'sprung:fakeFinish': ['Hehe, itu portal bohongan. Yang asli nanti muncul~'],
     'sprung:realFinish': ['Ini portal yang asli. Ayo, sedikit lagi!'],
+    'trap:decoyPortal': ['Portalnya nakal ya. Coba perhatikan putarannya~'],
+    'sprung:decoyPortal': ['Hehe, itu portal bohongan~', 'Ups, portal yang itu cuma pura-pura~'],
   },
   chaos: {
     finishAfterManyDeaths: ['AKHIRNYA! GUA UDAH MAU PENSIUN!', 'Selamat… gua sampe ketiduran nunggunya.'],
@@ -57,6 +59,8 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:fakeCheckpoint': ['CHECKPOINT? PERCAYA AJA TERUS.', 'Benderanya miring, niatnya juga.'],
     'sprung:fakeFinish': ['FINISH? MANA ADA SEMUDAH ITU.', 'Portalnya kabur, hehe. Kejar dong!'],
     'sprung:realFinish': ['Oke oke… yang ini ASLI. Sumpah.'],
+    'trap:decoyPortal': ['Portal KW kok dipercaya?', 'Portalnya cuma cosplay, bro.'],
+    'sprung:decoyPortal': ['Portalnya cuma cosplay, bro.', 'Itu portal KW, hehe.'],
   },
   savage: {
     finishAfterManyDeaths: ['AKHIRNYA! Gua udah nulis surat wasiat tadi.', 'Selamat! Portalnya sampe tepuk tangan sambil nangis.'],
@@ -77,10 +81,18 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:fakeCheckpoint': ['Trust issues level: bendera.', 'Checkpoint palsu, harapan juga palsu.'],
     'sprung:fakeFinish': ['Lu kira udah menang? Lucu.', 'Portal itu lari lebih kenceng dari Mochi.'],
     'sprung:realFinish': ['Yang ini asli. Mungkin. Hehe.'],
+    'trap:decoyPortal': ['Portal KW, harapan juga KW.', 'Ditipu portal. Lagi.'],
+    'sprung:decoyPortal': ['Lu kira itu finish? Gemes.', 'Portal KW detected.'],
   },
 };
 
-/** Lines for a key in an intensity, falling back to Chaos when a mode has none. */
-export function linesFor(intensity: TrollIntensity, key: LineKey): string[] | undefined {
-  return TROLL_LINES[intensity][key] ?? TROLL_LINES.chaos[key];
+/** Extra lines a level brings for some keys and intensities (see LevelData.trollLines). */
+export type LevelLines = Partial<Record<TrollIntensity, Partial<Record<LineKey, string[]>>>>;
+
+/**
+ * Lines for a key in an intensity: the level's own set first, then the shared set, falling back
+ * to Chaos when a mode has none.
+ */
+export function linesFor(intensity: TrollIntensity, key: LineKey, level?: LevelLines): string[] | undefined {
+  return level?.[intensity]?.[key] ?? TROLL_LINES[intensity][key] ?? TROLL_LINES.chaos[key];
 }

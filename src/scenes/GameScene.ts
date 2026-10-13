@@ -29,11 +29,14 @@ type PlayState = 'playing' | 'dead' | 'complete';
 
 export interface GameSceneData {
   levelId?: number;
+  /** Dev only: start at this checkpoint (1-based), e.g. `?level=2&cp=3`. */
+  devCheckpoint?: number;
 }
 
 /** Runs one level: builds it from data, steps the player, resolves traps, deaths and completion. */
 export class GameScene extends Phaser.Scene {
   private levelId = 1;
+  private devCheckpoint = 0;
   private level!: LevelData;
   private world!: BuiltLevel;
   private player!: Player;
@@ -67,6 +70,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameSceneData): void {
     this.levelId = data.levelId ?? 1;
+    this.devCheckpoint = import.meta.env.DEV ? (data.devCheckpoint ?? 0) : 0;
     this.deaths = 0;
     this.state = 'playing';
     this.lookAhead = 0;
@@ -100,6 +104,11 @@ export class GameScene extends Phaser.Scene {
     this.fx = new FxManager(this);
     this.world = buildLevel(this, level, touch);
     this.respawnPoint = { ...this.world.spawn };
+    const devCp = this.world.checkpoints[this.devCheckpoint - 1];
+    if (devCp) {
+      devCp.activate();
+      this.respawnPoint = { x: devCp.x, y: devCp.bottomY };
+    }
 
     this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx + 400, true, true, false, false);
     this.player = new Player(this, this.respawnPoint.x, this.respawnPoint.y, this.fx);
@@ -136,7 +145,7 @@ export class GameScene extends Phaser.Scene {
     cam.fadeIn(250, 255, 243, 214);
 
     this.controls = new InputManager(this);
-    this.personality = new TrollPersonalityManager(() => this.gameMs);
+    this.personality = new TrollPersonalityManager(() => this.gameMs, level.trollLines);
 
     const bg = this.scene.get('Background') as BackgroundScene;
     bg.setScrollSource(() => cam.worldView.x);

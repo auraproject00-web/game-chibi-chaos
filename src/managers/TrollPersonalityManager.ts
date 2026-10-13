@@ -1,6 +1,6 @@
 import { TILE } from '../config';
 import { currentIntensity, PROFILES, type IntensityProfile, type NarratorFace } from './TrollIntensity';
-import { linesFor, type LineKey } from './trollLines';
+import { linesFor, type LevelLines, type LineKey } from './trollLines';
 import {
   EventBus,
   GameEvents,
@@ -104,7 +104,11 @@ export class TrollPersonalityManager {
   private idleMs = 0;
   private idleFired = false;
 
-  constructor(private readonly now: () => number) {
+  constructor(
+    private readonly now: () => number,
+    /** The level's own lines (e.g. Level 02's), used before the shared ones. */
+    private readonly levelLines?: LevelLines,
+  ) {
     EventBus.on(GameEvents.PlayerDied, this.onDeath, this);
     EventBus.on(GameEvents.PlayerRespawned, this.onRespawn, this);
     EventBus.on(GameEvents.TrapPassed, this.onTrapPassed, this);
@@ -220,7 +224,7 @@ export class TrollPersonalityManager {
     const profile = this.profile;
     if (!ignoreCooldown && t - this.lastCommentAt < profile.cooldownMs) return false;
     const intensity = currentIntensity();
-    const lines = linesFor(intensity, key);
+    const lines = linesFor(intensity, key, this.levelLines);
     if (!lines?.length) return false;
     const text = this.pick(lines);
     this.lastCommentAt = t;

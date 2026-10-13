@@ -1,20 +1,40 @@
 import Phaser from 'phaser';
 
+export interface PortalLook {
+  /**
+   * Decoy look (Triple Fake Finish): nearly the same portal, but it spins the other way and its
+   * glow is pink instead of lavender. Small, consistent tells a player can learn.
+   */
+  decoy?: boolean;
+}
+
 /** Swirling goal portal. Touching it completes the level. */
 export class FinishPortal {
   readonly area: Phaser.Geom.Rectangle;
   readonly center: Phaser.Math.Vector2;
   private readonly portal: Phaser.GameObjects.Image;
   private readonly glow: Phaser.GameObjects.Image;
+  private hop: Phaser.Tweens.Tween | null = null;
 
-  constructor(scene: Phaser.Scene, x: number, bottomY: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    bottomY: number,
+    private readonly look: PortalLook = {},
+  ) {
     const cy = bottomY - 46;
     this.center = new Phaser.Math.Vector2(x, cy);
-    const glow = (this.glow = scene.add.image(x, cy, 'glow').setDepth(11).setTint(0xcdb4ff).setScale(1.3));
+    this.glow = scene.add.image(x, cy, 'glow').setDepth(11).setTint(look.decoy ? 0xffb3c1 : 0xcdb4ff).setScale(1.3);
     this.portal = scene.add.image(x, cy, 'portal').setDepth(12);
-    scene.tweens.add({ targets: this.portal, angle: 360, duration: 3200, repeat: -1 });
+    this.startIdle(scene);
+    this.area = new Phaser.Geom.Rectangle(x - 22, cy - 34, 44, 80);
+  }
+
+  /** Endless spin, glow pulse and wobble. */
+  private startIdle(scene: Phaser.Scene): void {
+    scene.tweens.add({ targets: this.portal, angle: this.look.decoy ? -360 : 360, duration: 3200, repeat: -1 });
     scene.tweens.add({
-      targets: glow,
+      targets: this.glow,
       scale: { from: 1.15, to: 1.45 },
       alpha: { from: 0.9, to: 0.5 },
       duration: 900,
@@ -30,7 +50,19 @@ export class FinishPortal {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
-    this.area = new Phaser.Geom.Rectangle(x - 22, cy - 34, 44, 80);
+  }
+
+  /** Decoy only: back to a spot, visible and idle again (used when a decoy resets on respawn). */
+  resetTo(scene: Phaser.Scene, x: number, bottomY: number): void {
+    const cy = bottomY - 46;
+    this.hop?.stop();
+    this.hop = null;
+    scene.tweens.killTweensOf([this.portal, this.glow]);
+    this.center.set(x, cy);
+    this.portal.setPosition(x, cy).setVisible(true).setScale(1).setAngle(0).setAlpha(1);
+    this.glow.setPosition(x, cy).setVisible(true).setScale(1.3).setAngle(0).setAlpha(1);
+    this.area.setTo(x - 22, cy - 34, 44, 80);
+    this.startIdle(scene);
   }
 
   /**
@@ -44,7 +76,7 @@ export class FinishPortal {
     this.area.setEmpty();
     const arc = Math.max(70, Math.abs(cy - sy) + 60);
     const state = { t: 0 };
-    scene.tweens.add({
+    this.hop = scene.tweens.add({
       targets: state,
       t: 1,
       duration: 460,

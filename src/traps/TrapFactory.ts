@@ -1,4 +1,5 @@
 import { BaitCoinTrap } from './BaitCoinTrap';
+import { DecoyPortalTrap } from './DecoyPortalTrap';
 import { FakeCheckpointTrap } from './FakeCheckpointTrap';
 import { FakeFinishTrap } from './FakeFinishTrap';
 import { FakeFloorTrap } from './FakeFloorTrap';
@@ -39,5 +40,7 @@ function build(scene: Phaser.Scene, cfg: TrapConfig): Trap {
       return new MovingPlatformTrap(scene, cfg);
     case 'fakeFinish':
       return new FakeFinishTrap(scene, cfg);
+    case 'decoyPortal':
+      return new DecoyPortalTrap(scene, cfg);
   }
 }
