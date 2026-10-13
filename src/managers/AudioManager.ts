@@ -61,6 +61,13 @@ class AudioManagerImpl implements Synth {
     document.addEventListener('visibilitychange', this.onVisibility);
     window.addEventListener('pagehide', this.onPageHide);
     window.addEventListener('pageshow', this.onVisibility);
+    // Render the music now (silent, allowed before any tap) so it starts the moment audio unlocks.
+    window.setTimeout(() => this.renderLater('menu'), 400);
+  }
+
+  /** True once the browser lets us play sound (after the first tap). */
+  get isRunning(): boolean {
+    return this.running;
   }
 
   private readonly onGesture = (): void => this.unlock();
@@ -95,7 +102,12 @@ class AudioManagerImpl implements Synth {
           this.fail('Web Audio not supported');
           return;
         }
-        const ctx = new Ctor({ latencyHint: 'interactive' });
+        let ctx: AudioContext;
+        try {
+          ctx = new Ctor({ latencyHint: 'interactive' });
+        } catch {
+          ctx = new Ctor();
+        }
         this.ctx = ctx;
         this.master = ctx.createGain();
         this.master.gain.value = 0.9;
@@ -109,14 +121,15 @@ class AudioManagerImpl implements Synth {
         this.noise = this.makeNoise(ctx);
         this.applyVolumes();
         ctx.addEventListener('statechange', () => this.syncMusic());
-        // iOS Safari only fully unlocks after something is played inside the gesture.
-        const silent = ctx.createBufferSource();
-        silent.buffer = ctx.createBuffer(1, 1, 22050);
-        silent.connect(ctx.destination);
-        silent.start(0);
       }
       this.hiddenSuspend = false;
       if (this.ctx.state !== 'running') {
+        // iOS Safari only fully unlocks after something is played inside the gesture, and an
+        // earlier attempt (e.g. on touchstart) may not count, so play it on every attempt.
+        const silent = this.ctx.createBufferSource();
+        silent.buffer = this.ctx.createBuffer(1, 1, 22050);
+        silent.connect(this.ctx.destination);
+        silent.start(0);
         this.ctx.resume().then(
           () => this.syncMusic(),
           (e: unknown) => this.fail(`resume refused: ${String(e)}`),
@@ -349,10 +362,9 @@ class AudioManagerImpl implements Synth {
 
   /** Renders a track off the input handler (never inside a tap), then starts it if still wanted. */
   private renderLater(track: MusicTrack): void {
-    if (this.rendering.has(track) || !this.ctx) return;
-    const ctx = this.ctx;
+    if (this.rendering.has(track) || this.buffers.has(track) || this.closed) return;
     const job = new Promise<void>((resolve) => window.setTimeout(resolve, 30))
-      .then(() => renderTrack(track, ctx))
+      .then(() => renderTrack(track))
       .then((buffer) => {
         this.buffers.set(track, buffer);
         this.syncMusic();

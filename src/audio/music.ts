@@ -92,8 +92,11 @@ export const lastRenderTiming: Partial<Record<MusicTrack, { buildMs: number; tot
 
 type OfflineCtor = new (channels: number, length: number, sampleRate: number) => OfflineAudioContext;
 
-/** Renders one loop of the track. The tail that rings past the loop end is folded onto the start. */
-export async function renderTrack(track: MusicTrack, target: BaseAudioContext): Promise<AudioBuffer> {
+/**
+ * Renders one loop of the track. Needs no user gesture (offline rendering is silent), so it can run
+ * at boot and the music starts the instant audio is unlocked.
+ */
+export async function renderTrack(track: MusicTrack): Promise<AudioBuffer> {
   const def = TRACKS[track];
   const sr = 32000;
   const { samples } = loopInfo(track, sr);
@@ -210,7 +213,8 @@ export async function renderTrack(track: MusicTrack, target: BaseAudioContext): 
   for (let i = 0; i < samples; i++) peak = Math.max(peak, Math.abs(data[i]));
   const norm = peak > 0 ? 0.85 / peak : 1;
   for (let i = 0; i < samples; i++) data[i] *= norm;
-  const buffer = target.createBuffer(1, samples, sr);
+  // AudioBuffers are not tied to a context: this one plays in the live AudioContext later.
+  const buffer = ctx.createBuffer(1, samples, sr);
   buffer.getChannelData(0).set(data);
   lastRenderTiming[track] = { buildMs: Math.round(buildMs), totalMs: Math.round(performance.now() - started) };
   return buffer;
