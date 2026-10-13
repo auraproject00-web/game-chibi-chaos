@@ -84,6 +84,24 @@ the death animation, and milestones on the total death count saved in LocalStora
 are plain data at the top of that file. The popup sits under the top HUD, lasts about a second and
 never delays the respawn.
 
+## Troll narrator
+
+`src/managers/TrollPersonalityManager.ts` listens to gameplay events on the EventBus
+(`PlayerDied` with the real cause and stable trap id, `PlayerRespawned`, `TrapPassed`,
+`LevelComplete`) and sends lines through `NarratorSay`. The HUD shows one speech bubble at a time
+and a lower-priority line never replaces a higher one. Priority: Death Reaction milestone > near
+finish > same trap 3x / same area 5x > death within 3s of respawn > first death on a trap type >
+passing a trap that got you > idle 15s in a safe spot. A global 8s cooldown applies to every
+narrator line, idle fires once per still period, and the narrator stays quiet for a moment after a
+milestone. Lines, priorities and timings are data at the top of the file.
+
+Trap ids default to `<type>-<index>` (set `id` in the trap config to pin one). Static spikes are
+`spike-<index>`. A fall right after a fake floor or falling plank fired is credited to that trap.
+
+In dev builds a "DBG" chip under the pause button opens a debug panel: preview every narrator
+line, reset the cooldown, set idle to 3s, jump to the next death milestone. The debug tools are a
+dynamic import behind `import.meta.env.DEV`, so production builds do not contain them.
+
 To test milestones in dev, long-press the skull death counter: the total jumps to one below the
 next milestone (9, 24, 49, 99, 199…), so the next death triggers it.
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PLAYER } from './config';
 import { AudioManager } from './managers/AudioManager';
+import { EventBus } from './managers/EventBus';
 import { BackgroundScene } from './scenes/BackgroundScene';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
@@ -44,5 +45,6 @@ window.addEventListener('orientationchange', () => {
 });
 
 if (import.meta.env.DEV) {
-  (window as unknown as { __CHIBI__: Phaser.Game }).__CHIBI__ = game;
+  (window as unknown as { __CHIBI__: Phaser.Game; __BUS__: typeof EventBus }).__CHIBI__ = game;
+  (window as unknown as { __BUS__: typeof EventBus }).__BUS__ = EventBus;
 }

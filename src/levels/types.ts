@@ -1,4 +1,4 @@
-import type { TrapConfig } from '../traps/types';
+import type { TrapConfigWithId } from '../traps/types';
 
 /**
  * Data-driven level format. All coordinates are in tiles (see TILE in config.ts).
@@ -52,7 +52,7 @@ export interface LevelData {
    * Troll traps, built by traps/TrapFactory.ts. Introduce a few types per level, one at a time;
    * each must fire at the same spot every run so the player can learn it.
    */
-  traps?: TrapConfig[];
+  traps?: TrapConfigWithId[];
   checkpoints?: PointDef[];
   finish: PointDef;
   hints?: HintDef[];

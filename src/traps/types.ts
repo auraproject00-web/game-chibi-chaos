@@ -21,6 +21,9 @@ export type TrapConfig =
 
 export type TrapType = TrapConfig['type'];
 
+/** Every trap config may also set a stable `id` (default `<type>-<index>`). */
+export type TrapConfigWithId = TrapConfig & { id?: string };
+
 /** 1. Looks like ground, crumbles shortly after MOCHI lands on it. Tell: a small crack. */
 export interface FakeFloorConfig {
   type: 'fakeFloor';
@@ -104,14 +107,23 @@ export interface TrapContext {
   readonly fx: FxManager;
   readonly player: Player;
   readonly portal: FinishPortal;
-  /** Kills MOCHI (no-op if already dead). */
-  kill(cause?: DeathCause): void;
+  /** Kills MOCHI (no-op if already dead). `source` is the trap responsible, when there is one. */
+  kill(cause?: DeathCause, source?: Trap): void;
+  /**
+   * A trap fired because of MOCHI (floor started crumbling, plank started wobbling). Lets a fall
+   * that follows be credited to that trap instead of guessing from position.
+   */
+  triggered(source: Trap): void;
   /** Swaps left/right input for `ms` milliseconds. */
   reverseControls(ms: number): void;
 }
 
 export interface Trap {
   readonly type: TrapType;
+  /** Stable id: the config's `id`, or `<type>-<index in the level's traps>`. Set by TrapFactory. */
+  id: string;
+  /** Horizontal world px range the trap covers (used to notice MOCHI getting past it). */
+  readonly span?: { left: number; right: number };
   /** Static bodies that belong in the level's solid group. */
   readonly solids?: Phaser.GameObjects.GameObject[];
   /** Moving bodies that need their own collider with the player. */

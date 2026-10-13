@@ -6,10 +6,16 @@ import { InvisibleWallTrap } from './InvisibleWallTrap';
 import { ReverseControlsTrap } from './ReverseControlsTrap';
 import { RunningPortalTrap } from './RunningPortalTrap';
 import { SurpriseSpikesTrap } from './SurpriseSpikesTrap';
-import type { Trap, TrapConfig } from './types';
+import type { Trap, TrapConfig, TrapConfigWithId } from './types';
 
 /** Builds a trap from its config. Add new trap types here and in types.ts. */
-export function createTrap(scene: Phaser.Scene, cfg: TrapConfig): Trap {
+export function createTrap(scene: Phaser.Scene, cfg: TrapConfigWithId, index: number): Trap {
+  const trap = build(scene, cfg);
+  trap.id = cfg.id ?? `${cfg.type}-${index}`;
+  return trap;
+}
+
+function build(scene: Phaser.Scene, cfg: TrapConfig): Trap {
   switch (cfg.type) {
     case 'fakeFloor':
       return new FakeFloorTrap(scene, cfg);

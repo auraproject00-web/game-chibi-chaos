@@ -7,7 +7,44 @@ export const GameEvents = {
   Paused: 'paused',
   Resumed: 'resumed',
   DeathReaction: 'death-reaction',
+  /** Raw gameplay facts for the troll narrator (and anything else that wants them). */
+  PlayerDied: 'player-died',
+  PlayerRespawned: 'player-respawned',
+  TrapPassed: 'trap-passed',
+  /** The troll narrator wants to say something. */
+  NarratorSay: 'narrator-say',
 } as const;
+
+/** Everything known about one death. Cause and trap come from the real gameplay event. */
+export interface DeathContext {
+  cause: 'spike' | 'fall' | 'trap';
+  /** Stable trap id (e.g. `surpriseSpikes-1`, `spike-0` for static spikes), null for a plain pit. */
+  trapId: string | null;
+  /** Trap type, `spike` for static spikes, null for a plain pit. */
+  trapType: string | null;
+  x: number;
+  y: number;
+  /** Alive time since the last respawn (ms). `null` on the first life of the level. */
+  sinceRespawnMs: number | null;
+  /** Horizontal distance from MOCHI to the finish portal (px). */
+  distToFinish: number;
+  levelDeaths: number;
+  totalDeaths: number;
+  /** True when this death hit a Death Reaction milestone. */
+  milestone: boolean;
+}
+
+export interface TrapPassedPayload {
+  trapId: string;
+  trapType: string;
+}
+
+export interface NarratorLine {
+  text: string;
+  /** Higher wins. Milestones (Death Reaction) use 100. */
+  priority: number;
+  kind: string;
+}
 
 export interface DeathReactionPayload {
   message: string;

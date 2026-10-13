@@ -8,6 +8,7 @@ import type { RunningPortalConfig, Trap, TrapContext } from './types';
  */
 export class RunningPortalTrap implements Trap {
   readonly type = 'runningPortal';
+  id = '';
   private next = 0;
 
   constructor(private readonly cfg: RunningPortalConfig) {}

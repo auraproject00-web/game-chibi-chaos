@@ -10,7 +10,9 @@ import type { BaitCoinConfig, Trap, TrapContext } from './types';
  */
 export class BaitCoinTrap implements Trap {
   readonly type = 'baitCoin';
+  id = '';
   readonly spikes: SpikeTrap;
+  readonly span;
   private readonly coin: Phaser.GameObjects.Image;
   private readonly area: Phaser.Geom.Rectangle;
   private taken = false;
@@ -32,6 +34,10 @@ export class BaitCoinTrap implements Trap {
       tiles: cfg.spikes.w,
       hidden: true,
     });
+    this.span = {
+      left: Math.min(cfg.spikes.x, cfg.x) * TILE,
+      right: Math.max(cfg.spikes.x + cfg.spikes.w, cfg.x + 1) * TILE,
+    };
   }
 
   get isTaken(): boolean {
@@ -40,7 +46,7 @@ export class BaitCoinTrap implements Trap {
 
   update(player: Phaser.Geom.Rectangle, ctx: TrapContext): void {
     if (!this.taken && Phaser.Geom.Intersects.RectangleToRectangle(player, this.area)) this.take(ctx);
-    if (this.spikes.hits(player)) ctx.kill('spike');
+    if (this.spikes.hits(player)) ctx.kill('spike', this);
   }
 
   private take(ctx: TrapContext): void {

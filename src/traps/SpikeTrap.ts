@@ -45,6 +45,14 @@ export class SpikeTrap {
     this.hitArea = new Phaser.Geom.Rectangle(opts.x + 5, opts.surfaceY - SPIKE_H + 6, w - 10, SPIKE_H - 6);
   }
 
+  get left(): number {
+    return this.opts.x;
+  }
+
+  get right(): number {
+    return this.opts.x + this.opts.tiles * TILE;
+  }
+
   get isRevealed(): boolean {
     return this.revealed;
   }

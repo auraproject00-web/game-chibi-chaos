@@ -44,8 +44,8 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
     (s) => new SpikeTrap(scene, { x: s.x * TILE, surfaceY: s.y * TILE, tiles: s.w, hidden: false }),
   );
 
-  const traps = (data.traps ?? []).map((cfg) => {
-    const trap = createTrap(scene, cfg);
+  const traps = (data.traps ?? []).map((cfg, i) => {
+    const trap = createTrap(scene, cfg, i);
     trap.solids?.forEach((zone) => solids.add(zone));
     return trap;
   });

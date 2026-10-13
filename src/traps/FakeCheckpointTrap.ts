@@ -10,6 +10,8 @@ import type { FakeCheckpointConfig, Trap, TrapContext } from './types';
  */
 export class FakeCheckpointTrap implements Trap {
   readonly type = 'fakeCheckpoint';
+  id = '';
+  readonly span;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly area: Phaser.Geom.Rectangle;
   private readonly spikes: SpikeTrap | null;
@@ -27,6 +29,7 @@ export class FakeCheckpointTrap implements Trap {
     this.spikes = cfg.spikes
       ? new SpikeTrap(scene, { x: cfg.spikes.x * TILE, surfaceY: bottomY, tiles: cfg.spikes.w, hidden: true })
       : null;
+    this.span = { left: cfg.x * TILE, right: (cfg.spikes ? Math.max(cfg.x + 1, cfg.spikes.x + cfg.spikes.w) : cfg.x + 1) * TILE };
   }
 
   get isExposed(): boolean {
@@ -35,7 +38,7 @@ export class FakeCheckpointTrap implements Trap {
 
   update(player: Phaser.Geom.Rectangle, ctx: TrapContext): void {
     if (!this.exposed && Phaser.Geom.Intersects.RectangleToRectangle(player, this.area)) this.expose(ctx);
-    if (this.spikes?.hits(player)) ctx.kill('spike');
+    if (this.spikes?.hits(player)) ctx.kill('spike', this);
   }
 
   private expose(ctx: TrapContext): void {

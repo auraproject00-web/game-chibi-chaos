@@ -41,8 +41,9 @@ export class FakePlatform {
   }
 
   /** Called when MOCHI stands on top. */
-  trigger(): void {
-    if (this.state !== 'idle') return;
+  /** Returns true when this call started the crumble. */
+  trigger(): boolean {
+    if (this.state !== 'idle') return false;
     this.state = 'shaking';
     this.scene.tweens.add({
       targets: this.gfx,
@@ -52,6 +53,7 @@ export class FakePlatform {
       repeat: -1,
     });
     this.timer = this.scene.time.delayedCall(this.delayMs, () => this.fall());
+    return true;
   }
 
   private fall(): void {

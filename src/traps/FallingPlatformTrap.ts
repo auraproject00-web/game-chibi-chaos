@@ -15,7 +15,9 @@ const MAX_FALL = 620;
  */
 export class FallingPlatformTrap implements Trap {
   readonly type = 'fallingPlatform';
+  id = '';
   readonly bodies;
+  readonly span;
   private readonly plank: Phaser.Physics.Arcade.Image;
   private readonly home: Phaser.Math.Vector2;
   private state: PlankState = 'idle';
@@ -32,6 +34,7 @@ export class FallingPlatformTrap implements Trap {
     body.setAllowGravity(false).setImmovable(true).setMaxVelocityY(MAX_FALL);
     this.plank.setData(TRAP_DATA_KEY, this);
     this.bodies = [this.plank];
+    this.span = { left: cfg.x * TILE, right: (cfg.x + cfg.w) * TILE };
   }
 
   private get body(): Phaser.Physics.Arcade.Body {
@@ -45,6 +48,7 @@ export class FallingPlatformTrap implements Trap {
   onContact(ctx: TrapContext): void {
     if (this.state !== 'idle' || ctx.player.body.bottom > this.body.top + 4) return;
     this.state = 'wobble';
+    ctx.triggered(this);
     AudioManager.play('trap');
     this.scene.tweens.add({ targets: this.plank, angle: { from: -2.5, to: 2.5 }, duration: 60, yoyo: true, repeat: -1 });
     this.timer = this.scene.time.delayedCall(this.cfg.delayMs ?? 450, () => this.drop());

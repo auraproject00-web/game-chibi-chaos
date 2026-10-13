@@ -6,6 +6,7 @@ import type { ReverseControlsConfig, Trap, TrapContext } from './types';
 /** Reverse Controls: a dizzy swirl pickup that swaps left and right for a few seconds. */
 export class ReverseControlsTrap implements Trap {
   readonly type = 'reverseControls';
+  id = '';
   private readonly swirl: Phaser.GameObjects.Image;
   private readonly area: Phaser.Geom.Rectangle;
   private used = false;

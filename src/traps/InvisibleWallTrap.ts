@@ -6,6 +6,7 @@ import { TRAP_DATA_KEY, type InvisibleWallConfig, type Trap, type TrapContext } 
 /** Invisible Wall: solid but unseen. The first bump makes it shimmer into view for good. */
 export class InvisibleWallTrap implements Trap {
   readonly type = 'invisibleWall';
+  id = '';
   readonly solids;
   private readonly zone: Phaser.GameObjects.Zone;
   private revealed = false;
