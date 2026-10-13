@@ -70,7 +70,7 @@ export class SpikeTrap {
   reveal(): void {
     if (this.revealed) return;
     this.revealed = true;
-    AudioManager.play('trap');
+    AudioManager.play('spike');
     this.scene.tweens.add({
       targets: this.sprite,
       y: this.opts.surfaceY,

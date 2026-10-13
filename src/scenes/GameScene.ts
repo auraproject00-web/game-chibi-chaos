@@ -91,6 +91,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.level = level;
+    AudioManager.playMusic('game');
 
     const touch = this.sys.game.device.input.touch;
     this.fx = new FxManager(this);

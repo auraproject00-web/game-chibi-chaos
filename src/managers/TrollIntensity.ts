@@ -1,3 +1,4 @@
+import type { SfxName } from '../audio/sfx';
 import { SaveManager } from './SaveManager';
 
 /**
@@ -22,8 +23,11 @@ export interface IntensityProfile {
   idleMs: number;
   /** Comment on every trap death, not only the first one per trap. */
   trapLineEveryDeath: boolean;
-  /** Chance that a narrator comment plays a small cartoon sound. */
-  sfxChance: number;
+  /**
+   * Sounds a narrator popup picks from (one per popup). Only the choice changes per mode; every
+   * sound has a fixed level, so the player's volume settings are never touched.
+   */
+  popupSfx: SfxName[];
   /** Bubble animation. */
   popup: 'simple' | 'bounce' | 'wild';
   /** How long the bubble stays fully visible (plus ~0.5s of in/out animation, ~1.65–1.7s total). */
@@ -39,7 +43,7 @@ export const PROFILES: Record<TrollIntensity, IntensityProfile> = {
     cooldownMs: 15000,
     idleMs: 20000,
     trapLineEveryDeath: false,
-    sfxChance: 0,
+    popupSfx: ['narSoft'],
     popup: 'simple',
     holdMs: 1200,
     faces: { happy: 'nar_smile', tease: 'nar_smile', wow: 'nar_smile', bored: 'nar_sleepy' },
@@ -50,7 +54,7 @@ export const PROFILES: Record<TrollIntensity, IntensityProfile> = {
     cooldownMs: 8000,
     idleMs: 15000,
     trapLineEveryDeath: false,
-    sfxChance: 0.35,
+    popupSfx: ['blip', 'blip', 'boing'],
     popup: 'bounce',
     holdMs: 1150,
     faces: { happy: 'nar_laugh', tease: 'nar_smirk', wow: 'nar_shock', bored: 'nar_sleepy' },
@@ -61,7 +65,7 @@ export const PROFILES: Record<TrollIntensity, IntensityProfile> = {
     cooldownMs: 5000,
     idleMs: 12000,
     trapLineEveryDeath: true,
-    sfxChance: 0.6,
+    popupSfx: ['narSavage', 'narSavage', 'hehe', 'boing'],
     popup: 'wild',
     holdMs: 1100,
     faces: { happy: 'nar_devil', tease: 'nar_laugh', wow: 'nar_shock', bored: 'nar_devil' },

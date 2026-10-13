@@ -13,6 +13,8 @@ export interface OverlayOptions {
   title: string;
   body?: string;
   buttons: OverlayButton[];
+  /** Two columns for long lists (e.g. Settings). An odd last button is centered. Default 1. */
+  columns?: 1 | 2;
 }
 
 /**
@@ -24,6 +26,7 @@ export class Overlay extends Phaser.GameObjects.Container {
   private readonly panel: Phaser.GameObjects.Container;
   private readonly buttons: Button[] = [];
   private readonly panelH: number;
+  private readonly panelW: number;
   private readonly bodyText: Phaser.GameObjects.Text | null;
 
   constructor(scene: Phaser.Scene, opts: OverlayOptions) {
@@ -31,14 +34,17 @@ export class Overlay extends Phaser.GameObjects.Container {
     this.dim = scene.add.rectangle(0, 0, 10, 10, 0x3b2a3a, 0.45).setOrigin(0).setInteractive();
     this.panel = scene.add.container(0, 0);
 
-    const panelW = 380;
+    const cols = opts.columns ?? 1;
+    const panelW = cols === 2 ? 560 : 380;
+    this.panelW = panelW;
     const bodyText = opts.body
       ? scene.add.text(0, 0, opts.body, textStyle(20, TONES.inkCss, { align: 'center', wordWrap: { width: panelW - 60 } })).setOrigin(0.5, 0)
       : null;
     this.bodyText = bodyText;
     const bodyH = bodyText ? bodyText.height + 18 : 0;
-    const btnGap = 70;
-    const panelH = 96 + bodyH + opts.buttons.length * btnGap;
+    const btnGap = cols === 2 ? 64 : 70;
+    const rows = Math.ceil(opts.buttons.length / cols);
+    const panelH = 96 + bodyH + rows * btnGap;
     this.panelH = panelH;
 
     const g = scene.add.graphics();
@@ -67,12 +73,15 @@ export class Overlay extends Phaser.GameObjects.Container {
       y += bodyH;
     }
     y += 34;
-    for (const b of opts.buttons) {
-      const btn = new Button(scene, 0, y, b.label, b.onClick, { fill: b.fill ?? PALETTE.pink, width: 250, height: 54, fontSize: 24 });
+    opts.buttons.forEach((b, i) => {
+      const row = Math.floor(i / cols);
+      const lastAlone = cols === 2 && i === opts.buttons.length - 1 && i % 2 === 0;
+      const x = cols === 2 && !lastAlone ? (i % 2 === 0 ? -132 : 132) : 0;
+      const size = cols === 2 ? { width: 250, height: 50, fontSize: 21 } : { width: 250, height: 54, fontSize: 24 };
+      const btn = new Button(scene, x, y + row * btnGap, b.label, b.onClick, { fill: b.fill ?? PALETTE.pink, ...size });
       this.buttons.push(btn);
       this.panel.add(btn);
-      y += btnGap;
-    }
+    });
 
     this.add([this.dim, this.panel]);
     this.setDepth(1000);
@@ -94,7 +103,7 @@ export class Overlay extends Phaser.GameObjects.Container {
   }
 
   private fitScale(w: number, h: number): number {
-    return Phaser.Math.Clamp(Math.min((w - 32) / 400, (h - 40) / (this.panelH + 40)), 0.45, 1.25);
+    return Phaser.Math.Clamp(Math.min((w - 32) / (this.panelW + 20), (h - 40) / (this.panelH + 40)), 0.45, 1.25);
   }
 
   layout(w: number, h: number): void {

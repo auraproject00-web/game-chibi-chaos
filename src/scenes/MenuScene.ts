@@ -3,6 +3,7 @@ import { PALETTE, TONES } from '../config';
 import { MOCHI_FOOT_Y, MOCHI_TEX_H, mochiKey } from '../art/mochi';
 import { drawPlatform } from '../art/textures';
 import { LEVELS } from '../levels';
+import { AudioManager } from '../managers/AudioManager';
 import { SaveManager } from '../managers/SaveManager';
 import type { BackgroundScene } from './BackgroundScene';
 import { Button } from '../ui/Button';
@@ -23,6 +24,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     (this.scene.get('Background') as BackgroundScene).setScrollSource(null);
     this.overlay = null;
+    AudioManager.playMusic('menu');
     const { width: w, height: h } = this.scale;
     const landscape = w >= h * 1.05;
     const s = landscape

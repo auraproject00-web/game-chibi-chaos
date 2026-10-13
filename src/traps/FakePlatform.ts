@@ -60,7 +60,7 @@ export class FakePlatform {
     this.state = 'fallen';
     this.scene.tweens.killTweensOf(this.gfx);
     this.staticBody.enable = false;
-    AudioManager.play('crumble');
+    AudioManager.play('fakeFloor');
     this.scene.tweens.add({
       targets: this.gfx,
       y: this.home.y + 420,

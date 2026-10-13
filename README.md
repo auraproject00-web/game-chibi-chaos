@@ -103,12 +103,31 @@ traps or respawn.
 
 | Mode | Cooldown | Idle | Style |
 | --- | --- | --- | --- |
-| Soft | 15s | 20s | rare, supportive lines, calm fade-in, smiling face, no troll sounds |
-| Chaos (default) | 8s | 15s | cheeky lines, pop + bounce, sometimes a cartoon sound |
+| Soft | 15s | 20s | rare, supportive lines, calm fade-in, smiling face, one quiet chime |
+| Chaos (default) | 8s | 15s | cheeky lines, pop + bounce, playful blip/boing |
 | Savage | 5s | 12s | absurd/spicy lines (about the game, never the player), wiggle + sparkles, comments on every trap death |
 
 Profiles live in `src/managers/TrollIntensity.ts`, lines per mode in `src/managers/trollLines.ts`.
-`Suara Narator` turns narrator/troll sounds off separately from `Sound FX`.
+`Suara Narator` turns narrator/troll sounds off separately from `SFX`.
+
+## Audio
+
+Everything is synthesized with the Web Audio API, so there are no audio files or licenses to track.
+
+- `src/managers/AudioManager.ts`: one AudioContext, created on the first tap/key (autoplay rules,
+  with the iOS silent-buffer unlock). Buses: SFX volume/mute and music volume/mute, saved in
+  LocalStorage. Each sound has a minimum gap and at most 10 effects ring at once. The context is
+  suspended while the tab is hidden and closed when the game is destroyed. Pause and Level Clear
+  lower the music.
+- `src/audio/sfx.ts`: sound recipes (jump, land, death, respawn, spike, fake floor, checkpoint,
+  level complete, click, narrator popup per Troll Intensity, …).
+- `src/audio/music.ts`: two original loops (menu 100 BPM, gameplay 128 BPM) written as note data and
+  played by synthesized marimba, xylophone, bass and light percussion. Each is rendered once with an
+  OfflineAudioContext and played as one looping buffer, so the loop is seamless and nothing is
+  scheduled from JS while playing.
+
+Settings (menu or pause): `Musik`, `Vol Musik`, `SFX`, `Vol SFX`. The HUD speaker mutes everything.
+To swap in recorded music later, load the files and replace `renderTrack` with a decoded buffer.
 
 Trap ids default to `<type>-<index>` (set `id` in the trap config to pin one). Static spikes are
 `spike-<index>`. A fall right after a fake floor or falling plank fired is credited to that trap.

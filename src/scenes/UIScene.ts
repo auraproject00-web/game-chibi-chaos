@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PALETTE, TONES } from '../config';
-import { AudioManager, type SfxName } from '../managers/AudioManager';
+import { AudioManager } from '../managers/AudioManager';
 import { EventBus, GameEvents, type DeathReactionPayload, type LevelCompletePayload, type NarratorLine } from '../managers/EventBus';
 import type { TouchRole } from '../managers/InputManager';
 import { PROFILES } from '../managers/TrollIntensity';
@@ -249,8 +249,8 @@ export class UIScene extends Phaser.Scene {
       popup: profile.popup,
       face: line.face,
     });
-    if (shown && profile.sfxChance > 0 && Math.random() < profile.sfxChance) {
-      const pool: SfxName[] = line.intensity === 'savage' ? ['boing', 'hehe', 'blip'] : ['boing', 'blip'];
+    if (shown) {
+      const pool = profile.popupSfx;
       AudioManager.playTroll(pool[Math.floor(Math.random() * pool.length)]);
     }
   }
@@ -433,11 +433,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private soundKey(): string {
-    return AudioManager.sfxEnabled ? 'icon_sound_on' : 'icon_sound_off';
+    return AudioManager.anyEnabled ? 'icon_sound_on' : 'icon_sound_off';
   }
 
   private toggleSound(): void {
-    AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
+    AudioManager.toggleAll();
     this.soundIcon.setTexture(this.soundKey());
   }
 
