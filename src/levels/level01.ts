@@ -50,8 +50,5 @@ export const level01: LevelData = {
     { x: 17, y: 14, teach: 'jump', text: 'Space / ↑  untuk lompat', touchText: 'Tap sisi kanan layar untuk lompat' },
     { x: 28, y: 14, teach: 'highJump', text: 'Tahan lompat = lompat lebih tinggi' },
     { x: 47, y: 14, teach: 'checkpoint', text: 'Bendera = checkpoint' },
-    { x: 55, y: 14, text: 'Tidak semua tanah bisa dipercaya...' },
-    { x: 80, y: 14, text: 'Jalan ini 100% aman :)' },
-    { x: 116, y: 14, text: 'Portal di depan! Lurus aja :)' },
   ],
 };
