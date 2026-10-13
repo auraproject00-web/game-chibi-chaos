@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { PALETTE } from '../config';
+import { PALETTE, TONES } from '../config';
+import { textStyle } from '../ui/text';
 
 /** Particles and camera juice shared by the gameplay objects. */
 export class FxManager {
@@ -69,6 +70,23 @@ export class FxManager {
       onComplete: () => ring.destroy(),
     });
     this.sparkleEmitter.explode(6, x, y);
+  }
+
+  /** Cheeky floating word ("Hehe!", "Bonk!") that pops up and drifts away. */
+  pop(x: number, y: number, text: string): void {
+    const label = this.scene.add
+      .text(x, y, text, textStyle(18, '#ffffff', { stroke: TONES.inkCss, strokeThickness: 4 }))
+      .setOrigin(0.5)
+      .setDepth(30)
+      .setScale(0.3);
+    this.scene.tweens.chain({
+      targets: label,
+      tweens: [
+        { scale: 1, duration: 180, ease: 'Back.easeOut' },
+        { y: y - 26, alpha: 0, duration: 650, delay: 380, ease: 'Quad.easeIn' },
+      ],
+      onComplete: () => label.destroy(),
+    });
   }
 
   shake(duration = 180, intensity = 0.006): void {

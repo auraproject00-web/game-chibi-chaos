@@ -38,7 +38,7 @@ src/
   art/                    Procedural placeholder art (MOCHI frames, platforms, icons, backgrounds)
   scenes/                 Boot, Background (parallax), Menu, LevelSelect, Game, UI (HUD)
   entities/               Player (MOCHI), Checkpoint, FinishPortal
-  traps/                  FakePlatform, SpikeTrap (visible + hidden)
+  traps/                  Config-driven troll traps (types.ts, TrapFactory.ts, one class per trap)
   levels/                 Level data (data-driven), registry, LevelBuilder
   managers/               Input, Audio (Web Audio synth), Save (LocalStorage), FX, EventBus
   ui/                     Button, Overlay, HintBubble, text helpers
@@ -52,6 +52,28 @@ public/
 2. Add it to `LEVELS` in `src/levels/index.ts`.
 
 No changes to the core systems are needed.
+
+## Troll traps
+
+Traps are plain config objects in a level's `traps` array (types in `src/traps/types.ts`):
+
+| type | What it does | How to beat it once learned |
+| --- | --- | --- |
+| `fakeFloor` | Cracked ground crumbles 350ms after you land | Keep moving / jump over |
+| `surpriseSpikes` | Hidden spikes pop up under you, then stay visible | Jump over the spot |
+| `runningPortal` | The finish portal hops away when you get close | Follow it (it never comes back) |
+| `invisibleWall` | Unseen solid wall, shimmers into view after a bump | Jump over it |
+| `baitCoin` | Grabbing the coin pops spikes under it | Leave the coin alone |
+| `reverseControls` | Swirl pickup swaps left/right for 3s | Jump over the swirl |
+| `fakeCheckpoint` | Crooked-pole flag that never saves, can pop spikes | Ignore it, jump the spikes |
+| `fallingPlatform` | Wooden plank drops shortly after you stand on it | Hop off quickly |
+
+Example: `{ type: 'baitCoin', x: 32, y: 11, spikes: { x: 31, y: 14, w: 3 } }`.
+Use only a few trap types per level and introduce them one at a time. Every trap fires at the same
+spot every run; there is no randomness. Deaths are unlimited: MOCHI respawns at the last checkpoint
+and the death counter goes up.
+
+In dev (`npm run dev`), open `/?traplab` to play a test level with one of each trap.
 
 ## Deploying to Vercel
 

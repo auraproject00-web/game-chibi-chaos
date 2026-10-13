@@ -30,11 +30,14 @@ export class FakePlatform {
     this.gfx = scene.add.image(this.home.x, this.home.y, tex).setDepth(10);
     this.zone = scene.add.zone(x + w / 2, y + h / 2, w, h);
     scene.physics.add.existing(this.zone, true);
-    this.zone.setData('fake', this);
   }
 
   private get staticBody(): Phaser.Physics.Arcade.StaticBody {
     return this.zone.body as Phaser.Physics.Arcade.StaticBody;
+  }
+
+  get top(): number {
+    return this.staticBody.top;
   }
 
   /** Called when MOCHI stands on top. */

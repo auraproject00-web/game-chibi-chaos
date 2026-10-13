@@ -119,6 +119,30 @@ export function platformTexture(scene: Phaser.Scene, w: number, h: number, crack
   return key;
 }
 
+/** Height in px of a falling-platform plank. */
+export const PLANK_H = 18;
+
+/** Wooden plank for falling platforms: warm peach wood, so it never reads as solid grass. */
+export function plankTexture(scene: Phaser.Scene, w: number): string {
+  const key = `plank_${w}`;
+  if (!scene.textures.exists(key)) {
+    make(scene, key, w, PLANK_H, (g) => {
+      g.fillStyle(0xf2b880, 1);
+      g.fillRoundedRect(0, 0, w, PLANK_H, 6);
+      g.fillStyle(0xffd6a8, 1);
+      g.fillRoundedRect(3, 2, w - 6, 4, 2);
+      g.lineStyle(1.5, 0xc98a5a, 0.8);
+      for (let x = 24; x < w - 8; x += 26) g.lineBetween(x, 5, x, PLANK_H - 4);
+      g.fillStyle(0xa86f45, 1);
+      g.fillCircle(7, PLANK_H / 2 + 1, 2);
+      g.fillCircle(w - 7, PLANK_H / 2 + 1, 2);
+      g.lineStyle(2, 0xa86f45, 1);
+      g.strokeRoundedRect(1, 1, w - 2, PLANK_H - 2, 6);
+    });
+  }
+  return key;
+}
+
 export function generateTextures(scene: Phaser.Scene): void {
   generateMochiTextures(scene);
 
@@ -190,6 +214,79 @@ export function generateTextures(scene: Phaser.Scene): void {
     });
   flag('flag_off', 0xe5dcf3, 0xb3a3d0, false);
   flag('flag_on', PALETTE.pink, TONES.pinkDark, true);
+
+  // Fake checkpoint: same colors as an unused flag, but the pole leans (the learnable tell).
+  // Once exposed it becomes a cheeky flag sticking its tongue out.
+  const crookedFlag = (key: string, color: number, dark: number, troll: boolean): void =>
+    make(scene, key, 48, 72, (g) => {
+      g.fillStyle(0x9c6b4a, 1);
+      g.fillPoints(
+        [
+          { x: 10, y: 70 },
+          { x: 15, y: 70 },
+          { x: 19, y: 8 },
+          { x: 14, y: 8 },
+        ],
+        true,
+      );
+      g.fillStyle(PALETTE.cream, 1);
+      g.fillCircle(16.5, 8, 4.5);
+      g.lineStyle(1.5, 0x7a5038, 1);
+      g.strokeCircle(16.5, 8, 4.5);
+      const tri: Pt[] = [
+        { x: 19, y: 12 },
+        { x: 46, y: 24 },
+        { x: 18, y: 34 },
+      ];
+      g.fillStyle(color, 1);
+      g.fillPoints(tri, true);
+      g.lineStyle(2, dark, 1);
+      g.strokePoints(tri, true);
+      if (troll) {
+        g.fillStyle(TONES.ink, 1);
+        g.fillCircle(25, 20, 1.8);
+        g.fillCircle(31, 21, 1.8);
+        g.fillStyle(0xff6f91, 1);
+        g.fillEllipse(28.5, 28, 6, 5);
+      }
+      g.fillStyle(TONES.grass, 1);
+      g.fillEllipse(12.5, 70, 22, 6);
+    });
+  crookedFlag('flag_fake', 0xe5dcf3, 0xb3a3d0, false);
+  crookedFlag('flag_troll', PALETTE.peach, 0xd98b4a, true);
+
+  // Bait coin.
+  make(scene, 'coin', 26, 26, (g) => {
+    g.fillStyle(0xe0a83a, 1);
+    g.fillCircle(13, 13, 12);
+    g.fillStyle(0xffd86b, 1);
+    g.fillCircle(13, 13, 9.5);
+    g.fillStyle(0xfff1b8, 1);
+    g.fillPoints(starPoints(13, 13, 6, 2.6), true);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillEllipse(8.5, 8, 4, 2.5);
+    g.lineStyle(1.5, 0xb57f22, 1);
+    g.strokeCircle(13, 13, 12);
+  });
+
+  // Reverse-controls swirl.
+  make(scene, 'swirl', 34, 34, (g) => {
+    g.fillStyle(PALETTE.lavender, 1);
+    g.fillCircle(17, 17, 15);
+    g.lineStyle(2, TONES.lavenderDark, 1);
+    g.strokeCircle(17, 17, 15);
+    g.lineStyle(2.6, 0xffffff, 1);
+    g.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const a = i * 0.32;
+      const r = 1.5 + i * 0.3;
+      const px = 17 + Math.cos(a) * r;
+      const py = 17 + Math.sin(a) * r;
+      if (i === 0) g.moveTo(px, py);
+      else g.lineTo(px, py);
+    }
+    g.strokePath();
+  });
 
   // Finish portal.
   make(scene, 'portal', 72, 72, (g) => {

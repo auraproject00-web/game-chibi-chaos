@@ -1,3 +1,5 @@
+import type { TrapConfig } from '../traps/types';
+
 /**
  * Data-driven level format. All coordinates are in tiles (see TILE in config.ts).
  * For objects that stand on the ground (spawn, spikes, checkpoints, finish, hints),
@@ -11,19 +13,11 @@ export interface TileRect {
   h: number;
 }
 
-export interface FakePlatformDef extends TileRect {
-  /** How long it wobbles before falling. Default 350ms. */
-  delayMs?: number;
-}
-
+/** Always-visible spikes. Hidden ones are a trap: see `surpriseSpikes` in traps/types.ts. */
 export interface SpikeDef {
   x: number;
   y: number;
   w: number;
-  /** Hidden spikes pop out of the ground when the player passes over them. */
-  hidden?: boolean;
-  /** Trigger range in tiles (player center). Defaults to the spike span plus half a tile. */
-  trigger?: { from: number; to: number };
 }
 
 export interface PointDef {
@@ -53,8 +47,12 @@ export interface LevelData {
   height: number;
   spawn: PointDef;
   solids: TileRect[];
-  fakePlatforms?: FakePlatformDef[];
   spikes?: SpikeDef[];
+  /**
+   * Troll traps, built by traps/TrapFactory.ts. Introduce a few types per level, one at a time;
+   * each must fire at the same spot every run so the player can learn it.
+   */
+  traps?: TrapConfig[];
   checkpoints?: PointDef[];
   finish: PointDef;
   hints?: HintDef[];

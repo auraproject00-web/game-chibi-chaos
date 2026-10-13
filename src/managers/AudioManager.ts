@@ -8,7 +8,12 @@ export type SfxName =
   | 'crumble'
   | 'checkpoint'
   | 'victory'
-  | 'click';
+  | 'click'
+  | 'coin'
+  | 'whoosh'
+  | 'bonk'
+  | 'dizzy'
+  | 'hehe';
 
 /**
  * Small synthesized sound effects built on the Web Audio API, so the MVP needs no audio files.
@@ -99,6 +104,25 @@ class AudioManagerImpl {
         break;
       case 'click':
         this.tone('sine', 700, 900, t, 0.05, 0.1);
+        break;
+      case 'coin':
+        this.tone('square', 988, 988, t, 0.06, 0.05);
+        this.tone('square', 1319, 1319, t + 0.06, 0.16, 0.05);
+        break;
+      case 'whoosh':
+        this.burst(t, 0.28, 2400, 0.1);
+        this.tone('sine', 300, 1100, t, 0.22, 0.06);
+        break;
+      case 'bonk':
+        this.tone('square', 260, 120, t, 0.09, 0.07);
+        this.tone('sine', 160, 70, t, 0.14, 0.12);
+        break;
+      case 'dizzy':
+        this.wobble(t, 500, 900, 0.4, 0.08);
+        break;
+      case 'hehe':
+        // Three quick cheeky notes.
+        [880, 740, 988].forEach((f, i) => this.tone('triangle', f, f * 0.94, t + i * 0.08, 0.07, 0.09));
         break;
     }
   }

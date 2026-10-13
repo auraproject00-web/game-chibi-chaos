@@ -7,10 +7,10 @@ import type { LevelData } from '../levels/types';
 import { AudioManager } from '../managers/AudioManager';
 import { EventBus, GameEvents, type LevelCompletePayload } from '../managers/EventBus';
 import { FxManager } from '../managers/FxManager';
-import { InputManager } from '../managers/InputManager';
+import { InputManager, type ControlFrame } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
 import { TutorialManager } from '../managers/TutorialManager';
-import type { FakePlatform } from '../traps/FakePlatform';
+import { TRAP_DATA_KEY, type Trap, type TrapContext } from '../traps/types';
 import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
 
@@ -33,6 +33,10 @@ export class GameScene extends Phaser.Scene {
   private respawnPoint = { x: 0, y: 0 };
   private state: PlayState = 'playing';
   private lookAhead = 0;
+  private trapCtx!: TrapContext;
+  /** Remaining time of swapped left/right controls (Reverse Controls trap). */
+  private reversedMs = 0;
+  private dizzyIcon!: Phaser.GameObjects.Image;
 
   constructor() {
     super('Game');
@@ -43,6 +47,7 @@ export class GameScene extends Phaser.Scene {
     this.deaths = 0;
     this.state = 'playing';
     this.lookAhead = 0;
+    this.reversedMs = 0;
   }
 
   get levelInfo(): { id: number; name: string } {
@@ -70,6 +75,19 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.respawnPoint.x, this.respawnPoint.y, this.fx);
     this.tutorial = new TutorialManager(this.world.hints, this.player);
     this.physics.add.collider(this.player.hitbox, this.world.solids, this.onSolidContact, undefined, this);
+    const trapBodies = this.world.traps.flatMap((t) => t.bodies ?? []);
+    if (trapBodies.length) {
+      this.physics.add.collider(this.player.hitbox, trapBodies, this.onSolidContact, undefined, this);
+    }
+    this.trapCtx = {
+      scene: this,
+      fx: this.fx,
+      player: this.player,
+      portal: this.world.portal,
+      kill: () => this.killPlayer(),
+      reverseControls: (ms) => this.reverseControls(ms),
+    };
+    this.dizzyIcon = this.add.image(0, 0, 'swirl').setDepth(22).setScale(0.6).setVisible(false);
 
     // Camera follows smoothly with a small look-ahead in the facing direction.
     const cam = this.cameras.main;
@@ -124,25 +142,56 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== 'complete') this.pauseGame();
   }
 
+  /** Solid bodies that belong to a trap (fake floor, invisible wall, falling plank) report contact. */
   private onSolidContact(_player: unknown, other: unknown): void {
-    const fake = (other as Phaser.GameObjects.Zone).getData?.('fake') as FakePlatform | undefined;
-    if (fake && this.player.body.touching.down) fake.trigger();
+    const trap = (other as Phaser.GameObjects.GameObject).getData?.(TRAP_DATA_KEY) as Trap | undefined;
+    trap?.onContact?.(this.trapCtx);
+  }
+
+  private reverseControls(ms: number): void {
+    this.reversedMs = ms;
+    this.dizzyIcon.setVisible(true).setAlpha(1);
+  }
+
+  private updateDizzy(dt: number): void {
+    if (this.reversedMs <= 0) return;
+    this.reversedMs -= dt;
+    const b = this.player.bounds;
+    this.dizzyIcon.setPosition(b.centerX, b.top - 22).setAngle(this.dizzyIcon.angle + dt * 0.4);
+    // Blink during the last second so the player sees it is about to end.
+    this.dizzyIcon.setAlpha(this.reversedMs < 1000 ? 0.4 + 0.6 * Math.abs(Math.sin(this.reversedMs / 90)) : 1);
+    if (this.reversedMs <= 0) this.clearDizzy();
+  }
+
+  private clearDizzy(): void {
+    this.reversedMs = 0;
+    this.dizzyIcon.setVisible(false);
+  }
+
+  get controlsReversed(): boolean {
+    return this.reversedMs > 0;
   }
 
   update(_time: number, delta: number): void {
     if (this.state !== 'playing') return;
     // Clamp delta so a long frame (tab switch) cannot tunnel the player through floors.
     const dt = Math.min(delta, 50);
-    this.player.update(dt, this.controls.read());
+    const input = this.controls.read();
+    if (this.reversedMs > 0) input.moveX = (input.moveX === 0 ? 0 : -input.moveX) as ControlFrame['moveX'];
+    this.player.update(dt, input);
+    this.updateDizzy(dt);
 
     this.tutorial.update();
     const box = this.player.bounds;
     for (const spike of this.world.spikes) {
-      if (spike.update(box)) this.fx.shake(120, 0.004);
       if (spike.hits(box)) {
         this.killPlayer();
         return;
       }
+    }
+    for (const trap of this.world.traps) {
+      trap.update?.(box, this.trapCtx);
+      if (this.state !== 'playing') return;
     }
 
     if (box.top > this.world.heightPx + 40) {
@@ -178,13 +227,14 @@ export class GameScene extends Phaser.Scene {
     SaveManager.addDeath();
     EventBus.emit(GameEvents.DeathsChanged, this.deaths);
     AudioManager.play('death');
+    this.clearDizzy();
     this.fx.shake(220, 0.008);
     this.player.die();
     this.time.delayedCall(TIMING.respawnDelayMs, () => this.respawn());
   }
 
   private respawn(): void {
-    this.world.fakePlatforms.forEach((fp) => fp.reset());
+    this.world.traps.forEach((t) => t.onRespawn?.());
     this.player.respawn(this.respawnPoint.x, this.respawnPoint.y);
     this.lookAhead = 0;
     this.state = 'playing';
