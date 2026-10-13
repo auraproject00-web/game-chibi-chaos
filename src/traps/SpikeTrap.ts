@@ -1,0 +1,72 @@
+import Phaser from 'phaser';
+import { TILE } from '../config';
+import { AudioManager } from '../managers/AudioManager';
+
+export interface SpikeTrapOptions {
+  /** Left edge in world px. */
+  x: number;
+  /** Ground surface the spikes stand on, in world px. */
+  surfaceY: number;
+  /** Width in tiles. */
+  tiles: number;
+  hidden: boolean;
+  /** Horizontal world px range that makes hidden spikes pop out. */
+  triggerFrom: number;
+  triggerTo: number;
+}
+
+const SPIKE_H = 24;
+
+/**
+ * Visible spikes are always deadly. Hidden spikes wait inside the ground and pop up when
+ * MOCHI walks over them; once revealed they stay visible so the player can learn the spot.
+ */
+export class SpikeTrap {
+  private readonly sprite: Phaser.GameObjects.TileSprite;
+  private readonly hitArea: Phaser.Geom.Rectangle;
+  private revealed: boolean;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly opts: SpikeTrapOptions,
+  ) {
+    const w = opts.tiles * TILE;
+    this.revealed = !opts.hidden;
+    const startY = opts.hidden ? opts.surfaceY + SPIKE_H + 2 : opts.surfaceY;
+    // Hidden spikes render behind the ground so they are concealed until they rise.
+    this.sprite = scene.add
+      .tileSprite(opts.x, startY, w, SPIKE_H, 'spike')
+      .setOrigin(0, 1)
+      .setDepth(opts.hidden ? 5 : 11);
+    // Forgiving hitbox: inset from the sides and only the upper part of the spikes.
+    this.hitArea = new Phaser.Geom.Rectangle(opts.x + 5, opts.surfaceY - SPIKE_H + 6, w - 10, SPIKE_H - 6);
+  }
+
+  get isRevealed(): boolean {
+    return this.revealed;
+  }
+
+  /** Checks the trigger zone; returns true if the spikes popped this frame. */
+  update(player: Phaser.Geom.Rectangle): boolean {
+    if (this.revealed) return false;
+    const cx = player.centerX;
+    if (cx < this.opts.triggerFrom || cx > this.opts.triggerTo) return false;
+    this.reveal();
+    return true;
+  }
+
+  private reveal(): void {
+    this.revealed = true;
+    AudioManager.play('trap');
+    this.scene.tweens.add({
+      targets: this.sprite,
+      y: this.opts.surfaceY,
+      duration: 70,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  hits(player: Phaser.Geom.Rectangle): boolean {
+    return this.revealed && Phaser.Geom.Intersects.RectangleToRectangle(player, this.hitArea);
+  }
+}

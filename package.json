@@ -1,0 +1,20 @@
+{
+  "name": "chibi-chaos",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CHIBI CHAOS - Cute Outside, Chaos Inside. A 2D troll platformer built with Phaser 3.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^6.4.1"
+  }
+}
