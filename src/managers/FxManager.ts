@@ -57,6 +57,20 @@ export class FxManager {
     this.sparkleEmitter.explode(count, x, y);
   }
 
+  /** Soft expanding ring with a few sparkles, used for the respawn pop and death. */
+  puff(x: number, y: number): void {
+    const ring = this.scene.add.image(x, y, 'ring').setDepth(24).setScale(0.3).setAlpha(0.9);
+    this.scene.tweens.add({
+      targets: ring,
+      scale: 1.3,
+      alpha: 0,
+      duration: 320,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+    this.sparkleEmitter.explode(6, x, y);
+  }
+
   shake(duration = 180, intensity = 0.006): void {
     this.scene.cameras.main.shake(duration, intensity);
   }

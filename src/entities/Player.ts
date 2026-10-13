@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER } from '../config';
-import { MOCHI_FOOT_Y, MOCHI_TEX_H, mochiKey, type MochiFrame } from '../art/mochi';
+import { MOCHI_FOOT_Y, MOCHI_TEX_H, RUN_CYCLE, mochiKey, type MochiFrame } from '../art/mochi';
 import type { ControlFrame } from '../managers/InputManager';
 import type { FxManager } from '../managers/FxManager';
 import { AudioManager } from '../managers/AudioManager';
@@ -8,9 +8,15 @@ import { AudioManager } from '../managers/AudioManager';
 /** Visual scale of the 64px MOCHI texture (about 25% larger than the first prototype). */
 const BASE_SCALE = 0.98;
 
+/** Jelly spring for squash & stretch: stiff enough to snap back, soft enough to wobble. */
+const JELLY_STIFFNESS = 340;
+const JELLY_DAMPING = 13;
+/** Falling faster than this (px/s) switches MOCHI to the panic face. */
+const PANIC_FALL_SPEED = 420;
+
 /**
  * MOCHI. Physics lives on an invisible zone (stable hitbox); the visible sprite follows it
- * so squash & stretch never changes the collision box.
+ * so squash & stretch and every other animation never change the collision box.
  */
 export class Player {
   readonly hitbox: Phaser.GameObjects.Zone;
@@ -30,6 +36,16 @@ export class Player {
   private idleTime = 0;
   private squashX = 1;
   private squashY = 1;
+  private squashVX = 0;
+  private squashVY = 0;
+  /** Multiplier animated by the respawn "pop" tween. */
+  popScale = 1;
+  /** Extra lift animated by the victory hop. */
+  hopY = 0;
+  private jumpStartY = 0;
+  /** Simple stats the tutorial reads; they never feed back into movement. */
+  jumpCount = 0;
+  bestRise = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -119,16 +135,16 @@ export class Player {
   }
 
   private onJump(): void {
-    this.squashX = 0.72;
-    this.squashY = 1.3;
+    this.kick(0.72, 1.32);
+    this.jumpCount += 1;
+    this.jumpStartY = this.body.bottom;
     this.fx.dust(this.body.center.x, this.body.bottom, 5);
     AudioManager.play('jump');
   }
 
   private onLand(): void {
     const impact = Phaser.Math.Clamp(this.peakFallSpeed / PLAYER.maxFall, 0.25, 1);
-    this.squashX = 1 + 0.35 * impact;
-    this.squashY = 1 - 0.3 * impact;
+    this.kick(1 + 0.38 * impact, 1 - 0.32 * impact);
     if (this.peakFallSpeed > 250) {
       this.fx.dust(this.body.center.x, this.body.bottom, Math.round(4 + 6 * impact));
       AudioManager.play('land');
@@ -136,31 +152,59 @@ export class Player {
     this.peakFallSpeed = 0;
   }
 
-  /** Runs after physics so the sprite matches the resolved hitbox this frame. */
-  private syncVisual(_time: number, deltaMs: number): void {
+  /** Sets the jelly shape instantly; the spring then wobbles it back to round. */
+  private kick(sx: number, sy: number): void {
+    this.squashX = sx;
+    this.squashY = sy;
+    this.squashVX = 0;
+    this.squashVY = 0;
+  }
+
+  /** Runs after physics so the sprite matches the resolved hitbox this frame. Visual only. */
+  private syncVisual(time: number, deltaMs: number): void {
     if (!this.alive) return;
-    const dt = deltaMs / 1000;
+    const dt = Math.min(deltaMs, 50) / 1000;
     const body = this.body;
     const grounded = this.onGround;
 
-    // Ease squash back to neutral.
-    const k = 1 - Math.exp(-dt * 14);
-    this.squashX += (1 - this.squashX) * k;
-    this.squashY += (1 - this.squashY) * k;
+    if (!grounded) this.bestRise = Math.max(this.bestRise, this.jumpStartY - body.bottom);
+
+    // Damped spring back to a round shape: overshoot gives the jelly wobble.
+    this.squashVX += (-(this.squashX - 1) * JELLY_STIFFNESS - this.squashVX * JELLY_DAMPING) * dt;
+    this.squashVY += (-(this.squashY - 1) * JELLY_STIFFNESS - this.squashVY * JELLY_DAMPING) * dt;
+    this.squashX += this.squashVX * dt;
+    this.squashY += this.squashVY * dt;
 
     let frame: MochiFrame;
     let bob = 0;
-    let breathe = 0;
+    let shapeX = 1;
+    let shapeY = 1;
+    let jitter = 0;
     if (this.frozen) {
       frame = 'happy';
     } else if (!grounded) {
-      frame = body.velocity.y < 0 ? 'jump' : 'fall';
       this.idleTime = 0;
+      if (body.velocity.y < 0) {
+        frame = 'jump';
+        // Stretch a little while rising fast.
+        shapeY = 1 + Math.min(0.08, -body.velocity.y / 8000);
+      } else if (body.velocity.y > PANIC_FALL_SPEED) {
+        frame = 'panic';
+        jitter = Math.sin(time / 22) * 1.2;
+      } else {
+        frame = 'fall';
+      }
     } else if (Math.abs(body.velocity.x) > 25) {
-      frame = Math.floor(this.runDistance / 22) % 2 === 0 ? 'run1' : 'run2';
-      bob = Math.abs(Math.sin(this.runDistance / 7)) * 2.5;
+      // Quick little steps: four-frame cycle driven by distance, plus a springy hop.
+      const step = Math.floor(this.runDistance / 13);
+      frame = RUN_CYCLE[step % RUN_CYCLE.length];
+      const phase = Math.abs(Math.sin(this.runDistance / 8.3));
+      bob = phase * 3.5;
+      shapeY = 0.95 + phase * 0.08;
+      shapeX = 1.04 - phase * 0.06;
       this.idleTime = 0;
     } else {
+      // Idle: soft jelly breathing, wider when low and taller when high.
       this.idleTime += deltaMs;
       this.blinkMs -= deltaMs;
       frame = 'idle';
@@ -168,48 +212,54 @@ export class Player {
         frame = 'blink';
         if (this.blinkMs < -130) this.blinkMs = 2200 + Math.random() * 2200;
       }
-      breathe = Math.sin(this.idleTime / 260) * 0.03;
+      const t = this.idleTime / 1000;
+      const breathe = Math.sin(t * 2.6) * 0.035 + Math.sin(t * 5.2 + 1) * 0.008;
+      shapeY = 1 + breathe;
+      shapeX = 1 - breathe * 0.8;
     }
 
+    const sx = BASE_SCALE * this.popScale * this.squashX * shapeX;
+    const sy = BASE_SCALE * this.popScale * this.squashY * shapeY;
     this.sprite.setTexture(mochiKey(frame));
     this.sprite.setFlipX(this.facing < 0);
-    this.sprite.setPosition(body.center.x, body.bottom - bob);
-    this.sprite.setScale(BASE_SCALE * this.squashX * (1 - breathe * 0.5), BASE_SCALE * this.squashY * (1 + breathe));
+    this.sprite.setPosition(body.center.x + jitter, body.bottom - bob - this.hopY);
+    this.sprite.setScale(sx, sy);
     this.sprite.setRotation((body.velocity.x / PLAYER.maxSpeed) * 0.07);
   }
 
+  /** Funny death: quick flatten, X-eyes pop up, spin away; plus a small puff of particles. */
   die(): void {
     if (!this.alive) return;
     this.alive = false;
     this.body.setVelocity(0, 0);
     this.body.enable = false;
     const { x, y } = this.sprite;
+    const dir = this.facing;
     this.sprite.setTexture(mochiKey('dead')).setRotation(0);
-    this.fx.burst(x, y - 24);
-    this.scene.tweens.add({
+    this.sprite.setScale(BASE_SCALE * 1.35, BASE_SCALE * 0.6);
+    this.fx.burst(x, y - 22, 14);
+    this.fx.puff(x, y - 22);
+    this.scene.tweens.chain({
       targets: this.sprite,
-      y: y - 46,
-      scaleX: BASE_SCALE * 1.15,
-      scaleY: BASE_SCALE * 1.15,
-      duration: 180,
-      ease: 'Quad.easeOut',
-      onComplete: () => {
-        this.scene.tweens.add({
-          targets: this.sprite,
-          y: y + 30,
-          angle: 200 * this.facing,
+      tweens: [
+        { scaleX: BASE_SCALE * 0.9, scaleY: BASE_SCALE * 1.2, y: y - 50, duration: 190, ease: 'Back.easeOut' },
+        { angle: 25 * dir, duration: 90, ease: 'Sine.easeInOut' },
+        {
+          y: y + 40,
+          angle: 220 * dir,
           alpha: 0,
-          scaleX: BASE_SCALE * 0.6,
-          scaleY: BASE_SCALE * 0.6,
-          duration: 300,
+          scaleX: BASE_SCALE * 0.5,
+          scaleY: BASE_SCALE * 0.5,
+          duration: 240,
           ease: 'Quad.easeIn',
-        });
-      },
+        },
+      ],
     });
   }
 
   respawn(x: number, bottomY: number): void {
     this.scene.tweens.killTweensOf(this.sprite);
+    this.scene.tweens.killTweensOf(this);
     this.body.enable = true;
     this.body.reset(x, bottomY - PLAYER.height / 2);
     this.alive = true;
@@ -220,10 +270,19 @@ export class Player {
     this.jumpBufferMs = 0;
     this.peakFallSpeed = 0;
     this.facing = 1;
-    this.squashX = 0.5;
-    this.squashY = 1.5;
+    this.kick(1, 1);
     this.sprite.setAlpha(1).setAngle(0).setPosition(x, bottomY).setTexture(mochiKey('idle'));
-    this.fx.dust(x, bottomY, 8);
+    // Pop in: grow from nothing with an overshoot, then a jelly wobble.
+    this.popScale = 0;
+    this.scene.tweens.add({
+      targets: this,
+      popScale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+      onComplete: () => this.kick(1.18, 0.86),
+    });
+    this.fx.puff(x, bottomY - 22);
+    this.fx.dust(x, bottomY, 6);
   }
 
   /** Stops control and plays the victory hop. */
@@ -231,11 +290,10 @@ export class Player {
     this.frozen = true;
     this.body.setVelocity(0, 0);
     this.body.setAllowGravity(false);
-    this.squashX = 0.7;
-    this.squashY = 1.35;
+    this.kick(0.7, 1.35);
     this.scene.tweens.add({
-      targets: this.sprite,
-      y: this.sprite.y - 28,
+      targets: this,
+      hopY: 28,
       duration: 220,
       yoyo: true,
       repeat: 1,

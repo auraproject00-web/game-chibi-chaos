@@ -66,11 +66,14 @@ class AudioManagerImpl {
     const t = this.ctx.currentTime + 0.005;
     switch (name) {
       case 'jump':
-        this.tone('square', 330, 720, t, 0.13, 0.07);
+        // Soft "boing" up-sweep.
+        this.tone('triangle', 420, 880, t, 0.11, 0.09);
+        this.tone('sine', 840, 1300, t + 0.02, 0.07, 0.03);
         break;
       case 'land':
-        this.tone('triangle', 160, 70, t, 0.08, 0.18);
-        this.burst(t, 0.05, 900, 0.06);
+        // Squishy little thump.
+        this.tone('sine', 190, 80, t, 0.07, 0.12);
+        this.burst(t, 0.04, 600, 0.035);
         break;
       case 'trap':
         this.tone('square', 1200, 1800, t, 0.05, 0.06);
@@ -81,12 +84,12 @@ class AudioManagerImpl {
         this.tone('triangle', 120, 60, t, 0.25, 0.12);
         break;
       case 'death':
-        // Cartoon "boing" then a wobbly slide down: funny, not harsh.
-        this.tone('sine', 520, 900, t, 0.08, 0.14);
-        this.wobble(t + 0.08, 700, 140, 0.55, 0.13);
+        // Cartoon "pop" then a wobbly slide down: funny, not harsh.
+        this.tone('sine', 520, 900, t, 0.07, 0.11);
+        this.wobble(t + 0.07, 700, 160, 0.45, 0.09);
         break;
       case 'checkpoint':
-        [523.25, 659.25, 783.99].forEach((f, i) => this.tone('triangle', f, f, t + i * 0.07, 0.12, 0.14));
+        [659.25, 783.99, 1046.5].forEach((f, i) => this.tone('sine', f, f, t + i * 0.065, 0.14, 0.1));
         break;
       case 'victory':
         [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>

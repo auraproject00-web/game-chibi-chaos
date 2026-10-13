@@ -9,6 +9,7 @@ import { EventBus, GameEvents, type LevelCompletePayload } from '../managers/Eve
 import { FxManager } from '../managers/FxManager';
 import { InputManager } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
+import { TutorialManager } from '../managers/TutorialManager';
 import type { FakePlatform } from '../traps/FakePlatform';
 import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
@@ -26,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private world!: BuiltLevel;
   private player!: Player;
   private fx!: FxManager;
+  private tutorial!: TutorialManager;
   controls!: InputManager;
   private deaths = 0;
   private respawnPoint = { x: 0, y: 0 };
@@ -66,6 +68,7 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx + 400, true, true, false, false);
     this.player = new Player(this, this.respawnPoint.x, this.respawnPoint.y, this.fx);
+    this.tutorial = new TutorialManager(this.world.hints, this.player);
     this.physics.add.collider(this.player.hitbox, this.world.solids, this.onSolidContact, undefined, this);
 
     // Camera follows smoothly with a small look-ahead in the facing direction.
@@ -132,6 +135,7 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min(delta, 50);
     this.player.update(dt, this.controls.read());
 
+    this.tutorial.update();
     const box = this.player.bounds;
     for (const spike of this.world.spikes) {
       if (spike.update(box)) this.fx.shake(120, 0.004);
@@ -151,6 +155,7 @@ export class GameScene extends Phaser.Scene {
         cp.activate();
         this.respawnPoint = { x: cp.x, y: cp.bottomY };
         AudioManager.play('checkpoint');
+        this.tutorial.onCheckpoint();
         this.fx.sparkle(cp.x + 10, cp.bottomY - 50);
       }
     }

@@ -127,6 +127,12 @@ export function generateTextures(scene: Phaser.Scene): void {
     g.fillStyle(0xffffff, 1);
     g.fillCircle(8, 8, 7);
   });
+  make(scene, 'ring', 64, 64, (g) => {
+    g.lineStyle(5, 0xffffff, 1);
+    g.strokeCircle(32, 32, 26);
+    g.lineStyle(2, PALETTE.pink, 0.9);
+    g.strokeCircle(32, 32, 21);
+  });
   make(scene, 'sparkle', 20, 20, (g) => {
     g.fillStyle(0xffffff, 1);
     g.fillPoints(starPoints(10, 10, 9, 3.5, 4), true);
@@ -229,6 +235,27 @@ export function generateTextures(scene: Phaser.Scene): void {
       ],
       true,
     );
+  });
+  const speaker = (g: Phaser.GameObjects.Graphics): void => {
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(5, 12, 6, 8);
+    g.fillTriangle(9, 16, 18, 6, 18, 26);
+  };
+  make(scene, 'icon_sound_on', 32, 32, (g) => {
+    speaker(g);
+    g.lineStyle(2.6, 0xffffff, 1);
+    g.beginPath();
+    g.arc(18, 16, 6, -0.9, 0.9);
+    g.strokePath();
+    g.beginPath();
+    g.arc(18, 16, 11, -0.9, 0.9);
+    g.strokePath();
+  });
+  make(scene, 'icon_sound_off', 32, 32, (g) => {
+    speaker(g);
+    g.lineStyle(3, 0xffffff, 1);
+    g.lineBetween(21, 11, 29, 21);
+    g.lineBetween(29, 11, 21, 21);
   });
   make(scene, 'skull', 32, 32, (g) => {
     g.fillStyle(0xffffff, 1);

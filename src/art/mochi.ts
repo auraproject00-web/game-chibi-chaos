@@ -6,9 +6,23 @@ import { PALETTE, TONES } from '../config';
  * Design locked to the concept sheet: round mint body, big black eyes with highlights,
  * pink cheeks, tiny feet and a small leaf on top of the head.
  */
-export type MochiFrame = 'idle' | 'blink' | 'run1' | 'run2' | 'jump' | 'fall' | 'dead' | 'happy';
+export type MochiFrame =
+  | 'idle'
+  | 'blink'
+  | 'run1'
+  | 'run2'
+  | 'run3'
+  | 'run4'
+  | 'jump'
+  | 'fall'
+  | 'panic'
+  | 'dead'
+  | 'happy';
 
-export const MOCHI_FRAMES: MochiFrame[] = ['idle', 'blink', 'run1', 'run2', 'jump', 'fall', 'dead', 'happy'];
+export const MOCHI_FRAMES: MochiFrame[] = ['idle', 'blink', 'run1', 'run2', 'run3', 'run4', 'jump', 'fall', 'panic', 'dead', 'happy'];
+
+/** Four-step run cycle: tiny feet alternate quickly. */
+export const RUN_CYCLE: MochiFrame[] = ['run1', 'run2', 'run3', 'run4'];
 
 export const MOCHI_TEX_W = 64;
 export const MOCHI_TEX_H = 68;
@@ -58,10 +72,14 @@ function drawMochi(g: Phaser.GameObjects.Graphics, frame: MochiFrame): void {
   const feet: Record<MochiFrame, [number, number, number, number]> = {
     idle: [23, 61, 41, 61],
     blink: [23, 61, 41, 61],
-    run1: [20, 60, 43, 62],
-    run2: [21, 62, 44, 60],
+    // Run cycle: front foot reaches forward and lifts, then the feet pass each other.
+    run1: [19, 62, 46, 59],
+    run2: [23, 61, 41, 62],
+    run3: [26, 59, 38, 62],
+    run4: [22, 62, 42, 61],
     jump: [25, 59, 39, 59],
     fall: [21, 62, 43, 62],
+    panic: [17, 60, 47, 60],
     dead: [22, 61, 42, 61],
     happy: [22, 61, 42, 61],
   };
@@ -107,6 +125,8 @@ function drawMochi(g: Phaser.GameObjects.Graphics, frame: MochiFrame): void {
     case 'idle':
     case 'run1':
     case 'run2':
+    case 'run3':
+    case 'run4':
       drawEyesOpen(g);
       g.beginPath();
       g.arc(32, 42.5, 3.6, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
@@ -131,6 +151,37 @@ function drawMochi(g: Phaser.GameObjects.Graphics, frame: MochiFrame): void {
       g.fillStyle(0x8a3550, 1);
       g.fillEllipse(32, 46, 5, 6.5);
       break;
+    case 'panic': {
+      // Shocked white eyes with tiny pupils, wobbly open mouth and a sweat drop.
+      g.fillStyle(0xffffff, 1);
+      g.fillEllipse(23, 35, 12, 14);
+      g.fillEllipse(41, 35, 12, 14);
+      g.lineStyle(2, TONES.ink, 1);
+      g.strokeEllipse(23, 35, 12, 14);
+      g.strokeEllipse(41, 35, 12, 14);
+      g.fillStyle(TONES.ink, 1);
+      g.fillCircle(23, 36, 2.6);
+      g.fillCircle(41, 36, 2.6);
+      g.lineStyle(2, TONES.ink, 1);
+      g.lineBetween(17, 26, 25, 24.5);
+      g.lineBetween(47, 26, 39, 24.5);
+      g.fillStyle(0x8a3550, 1);
+      g.fillEllipse(32, 47, 9, 7);
+      g.fillStyle(0xff8fab, 1);
+      g.fillEllipse(32, 49, 5, 2.5);
+      const drop = [
+        { x: 53, y: 18 },
+        { x: 56.5, y: 25 },
+        { x: 55, y: 28 },
+        { x: 51, y: 28 },
+        { x: 49.5, y: 25 },
+      ];
+      g.fillStyle(0xbfe6ff, 1);
+      g.fillPoints(drop, true);
+      g.lineStyle(1.5, 0x5fb1e6, 1);
+      g.strokePoints(drop, true);
+      break;
+    }
     case 'happy':
       g.lineStyle(2.6, TONES.ink, 1);
       g.beginPath();

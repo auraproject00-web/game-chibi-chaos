@@ -6,6 +6,7 @@ import { FinishPortal } from '../entities/FinishPortal';
 import { FakePlatform } from '../traps/FakePlatform';
 import { SpikeTrap } from '../traps/SpikeTrap';
 import { HintBubble } from '../ui/HintBubble';
+import type { PlacedHint } from '../managers/TutorialManager';
 import type { LevelData } from './types';
 
 export interface BuiltLevel {
@@ -17,6 +18,7 @@ export interface BuiltLevel {
   spikes: SpikeTrap[];
   checkpoints: Checkpoint[];
   portal: FinishPortal;
+  hints: PlacedHint[];
 }
 
 /** Turns level data into game objects. Gameplay systems never read raw level data directly. */
@@ -58,10 +60,10 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
 
   const portal = new FinishPortal(scene, data.finish.x * TILE + TILE / 2, data.finish.y * TILE);
 
-  for (const hint of data.hints ?? []) {
-    const text = touchHints && hint.touchText ? hint.touchText : hint.text;
-    new HintBubble(scene, hint.x * TILE + TILE / 2, hint.y * TILE - 104, text);
-  }
+  const hints: PlacedHint[] = (data.hints ?? []).map((def) => {
+    const text = touchHints && def.touchText ? def.touchText : def.text;
+    return { def, bubble: new HintBubble(scene, def.x * TILE + TILE / 2, def.y * TILE - 96, text) };
+  });
 
   return {
     widthPx: data.width * TILE,
@@ -72,5 +74,6 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
     spikes,
     checkpoints,
     portal,
+    hints,
   };
 }

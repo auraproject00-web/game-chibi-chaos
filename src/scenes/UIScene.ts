@@ -20,6 +20,8 @@ export class UIScene extends Phaser.Scene {
   private game_!: GameScene;
   private pauseBtn!: IconButton;
   private restartBtn!: IconButton;
+  private soundBtn!: IconButton;
+  private soundIcon!: Phaser.GameObjects.Image;
   private levelPill!: Phaser.GameObjects.Container;
   private levelPillBg!: Phaser.GameObjects.Graphics;
   private levelText!: Phaser.GameObjects.Text;
@@ -43,6 +45,9 @@ export class UIScene extends Phaser.Scene {
 
     this.pauseBtn = new IconButton(this, 0, 0, 'icon_pause', () => this.game_.pauseGame(), HUD_BUTTON, PALETTE.lavender);
     this.restartBtn = new IconButton(this, 0, 0, 'icon_restart', () => this.game_.restartLevel(), HUD_BUTTON, 0x8fcbff);
+    this.soundBtn = new IconButton(this, 0, 0, this.soundKey(), () => this.toggleSound(), HUD_BUTTON, PALETTE.peach);
+    this.soundIcon = this.soundBtn.list.find((c) => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image;
+    this.soundBtn.setAlpha(0.92);
     this.pauseBtn.setAlpha(0.92);
     this.restartBtn.setAlpha(0.92);
 
@@ -88,16 +93,26 @@ export class UIScene extends Phaser.Scene {
     if (isPortraitTouch(this.scale.width, this.scale.height, this.isTouch)) this.game_.pauseGame();
   }
 
-  /** Small translucent pads that show where to press; they sit low, over the ground. */
+  /**
+   * Touch pads drawn for contrast on any background: a dark translucent disc with a white rim
+   * and a white arrow outlined in dark ink. They light up pink while pressed.
+   */
   private createTouchHints(): void {
     const make = (role: TouchRole, angle: number, radius: number): void => {
+      const glow = this.add.graphics();
+      glow.fillStyle(PALETTE.pink, 0.55);
+      glow.fillCircle(0, 0, radius);
+      glow.setVisible(false).setName('glow');
       const g = this.add.graphics();
-      g.fillStyle(0xffffff, 0.28);
+      g.fillStyle(TONES.ink, 0.28);
       g.fillCircle(0, 0, radius);
-      g.lineStyle(2.5, 0xffffff, 0.75);
+      g.lineStyle(3, 0xffffff, 0.95);
       g.strokeCircle(0, 0, radius);
+      g.lineStyle(1.5, TONES.ink, 0.35);
+      g.strokeCircle(0, 0, radius + 2);
+      const shadow = this.add.image(0, 2, 'arrow').setAngle(angle).setScale(radius / 38).setTint(TONES.ink).setAlpha(0.45);
       const arrow = this.add.image(0, 0, 'arrow').setAngle(angle).setScale(radius / 40);
-      this.touchHints[role] = this.add.container(0, 0, [g, arrow]).setDepth(5);
+      this.touchHints[role] = this.add.container(0, 0, [g, glow, shadow, arrow]).setDepth(5);
     };
     make('left', 0, 30);
     make('right', 180, 30);
@@ -111,7 +126,8 @@ export class UIScene extends Phaser.Scene {
       const hint = this.touchHints[role];
       if (!hint) continue;
       const on = held.has(role);
-      hint.setAlpha(on ? 0.9 : 0.45).setScale(this.u * (on ? 0.9 : 1));
+      (hint.getByName('glow') as Phaser.GameObjects.Graphics | null)?.setVisible(on);
+      hint.setAlpha(on ? 1 : 0.8).setScale(this.u * (on ? 0.92 : 1));
     }
   }
 
@@ -129,6 +145,7 @@ export class UIScene extends Phaser.Scene {
 
     this.pauseBtn.setScale(u).setPosition(left + size / 2, rowY);
     this.restartBtn.setScale(u).setPosition(right - size / 2, rowY);
+    this.soundBtn.setScale(u).setPosition(right - size * 1.5 - 8 * u, rowY);
 
     // Level label pill.
     const lw = this.levelText.width + 24;
@@ -144,7 +161,7 @@ export class UIScene extends Phaser.Scene {
     this.deathPillBg.clear();
     this.deathPillBg.fillStyle(TONES.ink, 0.45);
     this.deathPillBg.fillRoundedRect(0, -PILL_H / 2, dw, PILL_H, PILL_H / 2);
-    this.deathPill.setScale(u).setPosition(right - size - 8 * u - dw * u, rowY);
+    this.deathPill.setScale(u).setPosition(right - size * 2 - 16 * u - dw * u, rowY);
 
     // Touch pads: thumb-sized, inside the safe area, low on the screen over the ground.
     const padY = h - inset.bottom - 44 * u;
@@ -159,6 +176,15 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.overlay?.layout(w, h);
+  }
+
+  private soundKey(): string {
+    return AudioManager.sfxEnabled ? 'icon_sound_on' : 'icon_sound_off';
+  }
+
+  private toggleSound(): void {
+    AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
+    this.soundIcon.setTexture(this.soundKey());
   }
 
   private onDeaths(deaths: number): void {
@@ -201,6 +227,7 @@ export class UIScene extends Phaser.Scene {
           onClick: () => {
             AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
             overlay.getButton(2)?.setLabel(soundLabel());
+            this.soundIcon.setTexture(this.soundKey());
           },
         },
         { label: 'Main Menu', fill: 0xf7b878, onClick: () => this.game_.quitTo('Menu') },

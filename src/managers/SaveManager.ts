@@ -15,6 +15,8 @@ export interface SaveData {
   settings: {
     sfx: boolean;
   };
+  /** Control skills the player has already shown (tutorial hints stay hidden for these). */
+  tutorial: Record<string, boolean>;
 }
 
 function defaults(): SaveData {
@@ -24,6 +26,7 @@ function defaults(): SaveData {
     totalDeaths: 0,
     levels: {},
     settings: { sfx: true },
+    tutorial: {},
   };
 }
 
@@ -46,6 +49,7 @@ class SaveManagerImpl {
         version: 1,
         levels: { ...base.levels, ...(parsed.levels ?? {}) },
         settings: { ...base.settings, ...(parsed.settings ?? {}) },
+        tutorial: { ...base.tutorial, ...(parsed.tutorial ?? {}) },
       };
     } catch {
       this.data = defaults();
@@ -74,6 +78,16 @@ class SaveManagerImpl {
 
   setSfxEnabled(enabled: boolean): void {
     this.data.settings.sfx = enabled;
+    this.persist();
+  }
+
+  hasLearned(skill: string): boolean {
+    return !!this.data.tutorial[skill];
+  }
+
+  markLearned(skill: string): void {
+    if (this.data.tutorial[skill]) return;
+    this.data.tutorial[skill] = true;
     this.persist();
   }
 

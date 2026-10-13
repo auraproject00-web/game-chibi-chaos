@@ -31,10 +31,18 @@ export interface PointDef {
   y: number;
 }
 
+/** Controls the tutorial teaches. Once the player has shown a skill, its hint never returns. */
+export type TutorialSkill = 'move' | 'jump' | 'highJump' | 'checkpoint';
+
 export interface HintDef extends PointDef {
   text: string;
   /** Replacement text on touch devices. */
   touchText?: string;
+  /**
+   * Makes this a control hint: shown step by step (move, then jump, then high jump) and hidden
+   * for good once the player has done it. Hints without `teach` just appear when MOCHI is near.
+   */
+  teach?: TutorialSkill;
 }
 
 export interface LevelData {
