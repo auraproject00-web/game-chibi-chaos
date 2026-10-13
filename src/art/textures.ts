@@ -273,6 +273,78 @@ export function generateTextures(scene: Phaser.Scene): void {
     g.strokeCircle(13, 13, 12);
   });
 
+  // Narrator face icons for the speech bubble (the narrator has no body, just a cheeky face).
+  const face = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void, horns = false): void =>
+    make(scene, key, 36, 36, (g) => {
+      if (horns) {
+        g.fillStyle(0xf28aa8, 1);
+        g.fillTriangle(7, 11, 10, 1, 15, 8);
+        g.fillTriangle(29, 11, 26, 1, 21, 8);
+      }
+      g.fillStyle(0xfff3fb, 1);
+      g.fillCircle(18, 19, 15);
+      g.lineStyle(2.5, 0xf28aa8, 1);
+      g.strokeCircle(18, 19, 15);
+      g.fillStyle(PALETTE.pink, 0.9);
+      g.fillEllipse(9.5, 23, 6, 3.5);
+      g.fillEllipse(26.5, 23, 6, 3.5);
+      g.lineStyle(2, TONES.ink, 1);
+      g.fillStyle(TONES.ink, 1);
+      draw(g);
+    });
+  const arc = (g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, a0: number, a1: number): void => {
+    g.beginPath();
+    g.arc(x, y, r, Phaser.Math.DegToRad(a0), Phaser.Math.DegToRad(a1));
+    g.strokePath();
+  };
+  face('nar_smile', (g) => {
+    g.fillCircle(13, 17, 2);
+    g.fillCircle(23, 17, 2);
+    arc(g, 18, 21, 4.5, 20, 160);
+  });
+  face('nar_smirk', (g) => {
+    g.lineBetween(10, 17, 15, 16);
+    g.fillCircle(23, 17, 2);
+    g.lineBetween(14, 25, 23, 22);
+  });
+  face('nar_laugh', (g) => {
+    arc(g, 13, 18, 3, 200, 340);
+    arc(g, 23, 18, 3, 200, 340);
+    g.fillStyle(0x8a3550, 1);
+    g.beginPath();
+    g.arc(18, 22, 5.5, 0, Math.PI, false);
+    g.closePath();
+    g.fillPath();
+  });
+  face('nar_shock', (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(13, 17, 3.6);
+    g.fillCircle(23, 17, 3.6);
+    g.strokeCircle(13, 17, 3.6);
+    g.strokeCircle(23, 17, 3.6);
+    g.fillStyle(TONES.ink, 1);
+    g.fillCircle(13, 17, 1.4);
+    g.fillCircle(23, 17, 1.4);
+    g.fillStyle(0x8a3550, 1);
+    g.fillEllipse(18, 26, 5, 6);
+  });
+  face('nar_sleepy', (g) => {
+    g.lineBetween(10, 18, 16, 18);
+    g.lineBetween(20, 18, 26, 18);
+    g.strokeCircle(18, 25, 2);
+  });
+  face(
+    'nar_devil',
+    (g) => {
+      g.lineBetween(9, 13, 15, 16);
+      g.lineBetween(27, 13, 21, 16);
+      g.fillCircle(13, 18, 2);
+      g.fillCircle(23, 18, 2);
+      arc(g, 18, 21, 5.5, 15, 165);
+    },
+    true,
+  );
+
   // Reverse-controls swirl.
   make(scene, 'swirl', 34, 34, (g) => {
     g.fillStyle(PALETTE.lavender, 1);

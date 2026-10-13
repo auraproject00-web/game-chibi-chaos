@@ -14,6 +14,10 @@ export interface SaveData {
   levels: Record<string, LevelProgress>;
   settings: {
     sfx: boolean;
+    /** Troll Intensity of the narrator. */
+    trollIntensity: 'soft' | 'chaos' | 'savage';
+    /** Narrator voice and troll sound effects (separate from all SFX). */
+    trollSfx: boolean;
   };
   /** Control skills the player has already shown (tutorial hints stay hidden for these). */
   tutorial: Record<string, boolean>;
@@ -25,7 +29,7 @@ function defaults(): SaveData {
     unlockedLevel: 1,
     totalDeaths: 0,
     levels: {},
-    settings: { sfx: true },
+    settings: { sfx: true, trollIntensity: 'chaos', trollSfx: true },
     tutorial: {},
   };
 }
@@ -74,6 +78,25 @@ class SaveManagerImpl {
 
   get sfxEnabled(): boolean {
     return this.data.settings.sfx;
+  }
+
+  get trollIntensity(): 'soft' | 'chaos' | 'savage' {
+    const v = this.data.settings.trollIntensity;
+    return v === 'soft' || v === 'savage' ? v : 'chaos';
+  }
+
+  setTrollIntensity(v: 'soft' | 'chaos' | 'savage'): void {
+    this.data.settings.trollIntensity = v;
+    this.persist();
+  }
+
+  get trollSfxEnabled(): boolean {
+    return this.data.settings.trollSfx !== false;
+  }
+
+  setTrollSfxEnabled(enabled: boolean): void {
+    this.data.settings.trollSfx = enabled;
+    this.persist();
   }
 
   setSfxEnabled(enabled: boolean): void {

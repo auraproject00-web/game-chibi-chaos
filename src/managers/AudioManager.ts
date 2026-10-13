@@ -13,7 +13,9 @@ export type SfxName =
   | 'whoosh'
   | 'bonk'
   | 'dizzy'
-  | 'hehe';
+  | 'hehe'
+  | 'blip'
+  | 'boing';
 
 /**
  * Small synthesized sound effects built on the Web Audio API, so the MVP needs no audio files.
@@ -64,6 +66,15 @@ class AudioManagerImpl {
 
   setSfxEnabled(enabled: boolean): void {
     SaveManager.setSfxEnabled(enabled);
+  }
+
+  /**
+   * Troll sounds (narrator voice blips, cheeky laughs). They respect both the main SFX switch and
+   * the separate "narrator & troll sounds" switch in Settings.
+   */
+  playTroll(name: SfxName): void {
+    if (!SaveManager.trollSfxEnabled) return;
+    this.play(name);
   }
 
   play(name: SfxName): void {
@@ -119,6 +130,14 @@ class AudioManagerImpl {
         break;
       case 'dizzy':
         this.wobble(t, 500, 900, 0.4, 0.08);
+        break;
+      case 'blip':
+        // Narrator "talking": three tiny chirps.
+        [620, 820, 700].forEach((f, i) => this.tone('square', f, f * 1.08, t + i * 0.055, 0.04, 0.035));
+        break;
+      case 'boing':
+        this.tone('sine', 180, 520, t, 0.16, 0.12);
+        this.tone('triangle', 520, 260, t + 0.14, 0.14, 0.06);
         break;
       case 'hehe':
         // Three quick cheeky notes.

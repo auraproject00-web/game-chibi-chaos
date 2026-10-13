@@ -3,11 +3,11 @@ import { PALETTE, TONES } from '../config';
 import { MOCHI_FOOT_Y, MOCHI_TEX_H, mochiKey } from '../art/mochi';
 import { drawPlatform } from '../art/textures';
 import { LEVELS } from '../levels';
-import { AudioManager } from '../managers/AudioManager';
 import { SaveManager } from '../managers/SaveManager';
 import type { BackgroundScene } from './BackgroundScene';
 import { Button } from '../ui/Button';
 import { Overlay } from '../ui/Overlay';
+import { openSettingsOverlay } from '../ui/SettingsOverlay';
 import { textStyle } from '../ui/text';
 
 const TITLE_COLORS = ['#FF9FB6', '#9FE3AE', '#FFC98A', '#8FCBFF', '#C3A6FF', '#FF9FB6'];
@@ -136,24 +136,7 @@ export class MenuScene extends Phaser.Scene {
 
   private openSettings(): void {
     this.closeOverlay();
-    const label = (): string => `Sound FX: ${AudioManager.sfxEnabled ? 'ON' : 'OFF'}`;
-    const overlay = new Overlay(this, {
-      title: 'Settings',
-      body: 'Musik latar menyusul setelah evaluasi MVP.',
-      buttons: [
-        {
-          label: label(),
-          fill: 0x8fcbff,
-          onClick: () => {
-            AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
-            overlay.getButton(0)?.setLabel(label());
-            AudioManager.play('click');
-          },
-        },
-        { label: 'Close', onClick: () => this.closeOverlay() },
-      ],
-    });
-    this.overlay = overlay;
+    this.overlay = openSettingsOverlay(this, () => this.closeOverlay());
   }
 
   private openCredits(): void {

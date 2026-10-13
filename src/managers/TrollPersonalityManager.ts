@@ -1,4 +1,6 @@
 import { TILE } from '../config';
+import { currentIntensity, PROFILES, type IntensityProfile, type NarratorFace } from './TrollIntensity';
+import { linesFor, type LineKey } from './trollLines';
 import {
   EventBus,
   GameEvents,
@@ -34,31 +36,25 @@ export const PRIORITY: Record<CommentKind, number> = {
   idle: 10,
 };
 
-/** Lines per situation. The first line is the signature one and is used first. */
-export const LINES: Record<Exclude<CommentKind, 'trapType'>, string[]> = {
-  finishAfterManyDeaths: ['Akhirnya! Gua udah mau pensiun!', 'Selamat… gua sampe ketiduran nunggunya.'],
-  nearFinish: ['WKWKWK TINGGAL SELANGKAH!', 'Portalnya udah kelihatan lho, wkwk', 'Dikit lagi… DIKIT LAGI! Yah.'],
-  repeatTrap: ['Bro… jebakannya masih di situ 😭', 'Jebakan yang SAMA. Lagi.', 'Kamu sama jebakan itu jodoh ya?'],
-  sameArea: ['Mau gua kasih tutorial lagi?', 'Area ini kayaknya kangen sama kamu.', 'Ini tempat favorit buat mati ya?'],
-  quickDeath: ['LAH, BARU JUGA HIDUP?!', 'Rekor! Hidup paling singkat!', 'Respawn-nya aja belum kering!'],
-  passedTrap: ['Yahh… kok bisa lolos?!', 'Hmph. Beruntung doang itu.', 'Oke oke, kali ini kamu menang.'],
-  idle: ['Mochi, kita nunggu siapa nih?', 'Halo? Masih main kan?', 'Gua bosen nih. Gerak dong~'],
+/** Which narrator face (from the intensity profile) each kind uses. */
+const FACE_OF: Record<CommentKind, keyof IntensityProfile['faces']> = {
+  finishAfterManyDeaths: 'happy',
+  nearFinish: 'happy',
+  repeatTrap: 'tease',
+  sameArea: 'tease',
+  quickDeath: 'wow',
+  trapType: 'tease',
+  passedTrap: 'wow',
+  idle: 'bored',
 };
 
-/** Lines for dying to a specific trap type the first time. */
-export const TRAP_LINES: Record<string, string[]> = {
-  fakeFloor: ['Percaya aja sama lantainya? 🤣', 'Retaknya udah kelihatan lho~'],
-  fallingPlatform: ['Papan kayu kok dipercaya?', 'Turun bareng papannya, cie~'],
-  surpriseSpikes: ['Kejutaaan! 🎉', 'Katanya aman, hehe.'],
-  baitCoin: ['Koin gratis? Di game ini? 🤣', 'Serakah dikit, langsung kena.'],
-  fakeCheckpoint: ['Bendera miring kok dipercaya?', 'Checkpoint-nya palsu, hehe.'],
-  spike: ['Durinya kelihatan jelas lho…', 'Itu duri. Bukan bantal.'],
-};
-
+/**
+ * Shared tuning. The cooldown and idle time come from the current Troll Intensity profile
+ * (Soft 15s, Chaos 8s, Savage 5s); the overrides below are for the dev debug panel only.
+ */
 export const TUNING = {
-  /** Global cooldown for every non-milestone comment. */
-  cooldownMs: 8000,
-  idleMs: 15000,
+  /** Dev only: replaces the profile's idle time when set. */
+  idleOverrideMs: null as number | null,
   /** Deaths on one trap that count as "again": fires at 3, 6, 9… */
   repeatTrapEvery: 3,
   /** Deaths in one area that fire the tutorial joke: 5, 10, 15… */
@@ -130,10 +126,10 @@ export class TrollPersonalityManager {
       return;
     }
     this.idleMs += deltaMs;
-    if (!this.idleFired && this.idleMs >= TUNING.idleMs) {
+    if (!this.idleFired && this.idleMs >= (TUNING.idleOverrideMs ?? this.profile.idleMs)) {
       // Spent even if the cooldown blocks it: one try per still period.
       this.idleFired = true;
-      this.say('idle', LINES.idle);
+      this.say('idle', 'idle');
     }
   }
 
@@ -162,16 +158,17 @@ export class TrollPersonalityManager {
     }
 
     // Highest priority that applies wins; lower ones are not tried after it.
+    const trapKey: LineKey | null = d.trapType ? `trap:${d.trapType}` : null;
     if (d.distToFinish <= TUNING.nearFinishPx) {
-      this.say('nearFinish', LINES.nearFinish);
+      this.say('nearFinish', 'nearFinish');
     } else if (trapCount >= TUNING.repeatTrapEvery && trapCount % TUNING.repeatTrapEvery === 0) {
-      this.say('repeatTrap', LINES.repeatTrap);
+      this.say('repeatTrap', 'repeatTrap');
     } else if (areaCount % TUNING.sameAreaEvery === 0) {
-      this.say('sameArea', LINES.sameArea);
+      this.say('sameArea', 'sameArea');
     } else if (d.sinceRespawnMs !== null && d.sinceRespawnMs < TUNING.quickDeathMs) {
-      this.say('quickDeath', LINES.quickDeath);
-    } else if (firstOnThisTrap && d.trapType && TRAP_LINES[d.trapType]) {
-      this.say('trapType', TRAP_LINES[d.trapType]);
+      this.say('quickDeath', 'quickDeath');
+    } else if (trapKey && (firstOnThisTrap || this.profile.trapLineEveryDeath)) {
+      this.say('trapType', trapKey);
     }
   }
 
@@ -183,23 +180,33 @@ export class TrollPersonalityManager {
   private onTrapPassed(p: TrapPassedPayload): void {
     if (this.passedCommented.has(p.trapId)) return;
     if ((this.deathsByTrap.get(p.trapId) ?? 0) < TUNING.hardTrapDeaths) return;
-    if (this.say('passedTrap', LINES.passedTrap)) this.passedCommented.add(p.trapId);
+    if (this.say('passedTrap', 'passedTrap')) this.passedCommented.add(p.trapId);
   }
 
   private onComplete(p: LevelCompletePayload): void {
-    if (p.deaths > TUNING.finishAfterDeaths) this.say('finishAfterManyDeaths', LINES.finishAfterManyDeaths, true);
+    if (p.deaths > TUNING.finishAfterDeaths) this.say('finishAfterManyDeaths', 'finishAfterManyDeaths', true);
   }
 
   // ----- Output -----
 
+  /** Current Troll Intensity profile, read live so a Settings change applies right away. */
+  private get profile(): IntensityProfile {
+    return PROFILES[currentIntensity()];
+  }
+
   /** Returns true if the line was sent. */
-  private say(kind: CommentKind, lines: string[], ignoreCooldown = false): boolean {
+  private say(kind: CommentKind, key: LineKey, ignoreCooldown = false): boolean {
     const t = this.now();
     if (t < this.quietUntil) return false;
-    if (!ignoreCooldown && t - this.lastCommentAt < TUNING.cooldownMs) return false;
+    const profile = this.profile;
+    if (!ignoreCooldown && t - this.lastCommentAt < profile.cooldownMs) return false;
+    const intensity = currentIntensity();
+    const lines = linesFor(intensity, key);
+    if (!lines?.length) return false;
     const text = this.pick(lines);
     this.lastCommentAt = t;
-    const line: NarratorLine = { text, priority: PRIORITY[kind], kind };
+    const face: NarratorFace = profile.faces[FACE_OF[kind]];
+    const line: NarratorLine = { text, priority: PRIORITY[kind], kind, intensity, face };
     EventBus.emit(GameEvents.NarratorSay, line);
     return true;
   }
@@ -219,10 +226,9 @@ export class TrollPersonalityManager {
 
   /** Dev only: say a line of any kind right away, skipping cooldown (to preview the bubble). */
   debugSay(kind: CommentKind): void {
-    const lines = kind === 'trapType' ? TRAP_LINES.fakeFloor : LINES[kind];
     this.lastCommentAt = -Infinity;
     this.quietUntil = -Infinity;
-    this.say(kind, lines);
+    this.say(kind, kind === 'trapType' ? 'trap:fakeFloor' : kind);
   }
 
   /** Dev only: forget the cooldown so the next real event can comment. */
@@ -236,7 +242,7 @@ export class TrollPersonalityManager {
       byTrap: Object.fromEntries(this.deathsByTrap),
       byArea: Object.fromEntries(this.deathsByArea),
       idleMs: this.idleMs,
-      cooldownLeftMs: Math.max(0, TUNING.cooldownMs - (this.now() - this.lastCommentAt)),
+      cooldownLeftMs: Math.max(0, this.profile.cooldownMs - (this.now() - this.lastCommentAt)),
     };
   }
 }

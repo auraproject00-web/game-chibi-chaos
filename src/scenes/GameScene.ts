@@ -329,7 +329,7 @@ export class GameScene extends Phaser.Scene {
     const b = this.player.bounds;
     this.player.die(reaction.deathFace);
     if (reaction.milestone) {
-      AudioManager.play('hehe');
+      AudioManager.playTroll('hehe');
       if (reaction.milestone.confetti) this.fx.confetti(b.centerX, b.top);
     }
     this.time.delayedCall(TIMING.respawnDelayMs, () => this.respawn());

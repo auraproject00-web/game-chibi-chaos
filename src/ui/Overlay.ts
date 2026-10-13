@@ -24,6 +24,7 @@ export class Overlay extends Phaser.GameObjects.Container {
   private readonly panel: Phaser.GameObjects.Container;
   private readonly buttons: Button[] = [];
   private readonly panelH: number;
+  private readonly bodyText: Phaser.GameObjects.Text | null;
 
   constructor(scene: Phaser.Scene, opts: OverlayOptions) {
     super(scene, 0, 0);
@@ -34,6 +35,7 @@ export class Overlay extends Phaser.GameObjects.Container {
     const bodyText = opts.body
       ? scene.add.text(0, 0, opts.body, textStyle(20, TONES.inkCss, { align: 'center', wordWrap: { width: panelW - 60 } })).setOrigin(0.5, 0)
       : null;
+    this.bodyText = bodyText;
     const bodyH = bodyText ? bodyText.height + 18 : 0;
     const btnGap = 70;
     const panelH = 96 + bodyH + opts.buttons.length * btnGap;
@@ -80,6 +82,11 @@ export class Overlay extends Phaser.GameObjects.Container {
     const target = this.panel.scale;
     this.panel.setScale(target * 0.8);
     scene.tweens.add({ targets: this.panel, scale: target, duration: 260, ease: 'Back.easeOut' });
+  }
+
+  /** Swap the body text (keep the same number of lines so the panel size still fits). */
+  setBody(text: string): void {
+    this.bodyText?.setText(text);
   }
 
   getButton(index: number): Button | undefined {

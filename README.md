@@ -91,15 +91,30 @@ never delays the respawn.
 `LevelComplete`) and sends lines through `NarratorSay`. The HUD shows one speech bubble at a time
 and a lower-priority line never replaces a higher one. Priority: Death Reaction milestone > near
 finish > same trap 3x / same area 5x > death within 3s of respawn > first death on a trap type >
-passing a trap that got you > idle 15s in a safe spot. A global 8s cooldown applies to every
-narrator line, idle fires once per still period, and the narrator stays quiet for a moment after a
-milestone. Lines, priorities and timings are data at the top of the file.
+passing a trap that got you > idle in a safe spot. A global cooldown applies to every narrator
+line (milestones ignore it), idle fires once per still period, and the narrator stays quiet for a
+moment after a milestone. Priorities and trigger counts are data at the top of the file.
+
+### Troll intensity
+
+Settings (main menu, or pause > Settings) has `Troll: SOFT / CHAOS / SAVAGE`. It is saved in
+LocalStorage and applies immediately. It only changes the narrator: never difficulty, physics,
+traps or respawn.
+
+| Mode | Cooldown | Idle | Style |
+| --- | --- | --- | --- |
+| Soft | 15s | 20s | rare, supportive lines, calm fade-in, smiling face, no troll sounds |
+| Chaos (default) | 8s | 15s | cheeky lines, pop + bounce, sometimes a cartoon sound |
+| Savage | 5s | 12s | absurd/spicy lines (about the game, never the player), wiggle + sparkles, comments on every trap death |
+
+Profiles live in `src/managers/TrollIntensity.ts`, lines per mode in `src/managers/trollLines.ts`.
+`Suara Narator` turns narrator/troll sounds off separately from `Sound FX`.
 
 Trap ids default to `<type>-<index>` (set `id` in the trap config to pin one). Static spikes are
 `spike-<index>`. A fall right after a fake floor or falling plank fired is credited to that trap.
 
 In dev builds a "DBG" chip under the pause button opens a debug panel: preview every narrator
-line, reset the cooldown, set idle to 3s, jump to the next death milestone. The debug tools are a
+line, reset the cooldown, set idle to 3s, cycle the troll mode, jump to the next death milestone. The debug tools are a
 dynamic import behind `import.meta.env.DEV`, so production builds do not contain them.
 
 To test milestones in dev, long-press the skull death counter: the total jumps to one below the

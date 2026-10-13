@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { PALETTE, TONES } from '../config';
-import { AudioManager } from '../managers/AudioManager';
+import { AudioManager, type SfxName } from '../managers/AudioManager';
 import { EventBus, GameEvents, type DeathReactionPayload, type LevelCompletePayload, type NarratorLine } from '../managers/EventBus';
 import type { TouchRole } from '../managers/InputManager';
+import { PROFILES } from '../managers/TrollIntensity';
 import { IconButton } from '../ui/Button';
 import { Overlay } from '../ui/Overlay';
+import { openSettingsOverlay } from '../ui/SettingsOverlay';
 import { getSafeArea, isPortraitTouch } from '../ui/safeArea';
 import type { DebugHost } from '../ui/DebugTools';
 import { textStyle } from '../ui/text';
@@ -21,7 +23,12 @@ interface BubbleRequest {
   title?: string;
   priority: number;
   holdMs: number;
+  /** Narrator only: entrance animation and face icon (from the Troll Intensity profile). */
+  popup?: 'simple' | 'bounce' | 'wild';
+  face?: string;
 }
+/** A plain death message right after another bubble is skipped, so rapid deaths don't flicker popups. */
+const DEATH_MIN_GAP_MS = 1100;
 const PILL_H = 30;
 
 /**
@@ -48,6 +55,7 @@ export class UIScene extends Phaser.Scene {
   private toastPriority = 0;
   private toastW = 0;
   private toastReq: BubbleRequest | null = null;
+  private toastShownAt = -Infinity;
   private isTouch = false;
   private u = 1;
 
@@ -230,17 +238,30 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  /** Troll narrator line: lavender bubble with a pink "Narator" tag. */
+  /** Troll narrator line: lavender bubble with a pink "Narator" tag and a face; style follows the intensity. */
   private showNarrator(line: NarratorLine): void {
-    this.showBubble({ style: 'narrator', text: line.text, priority: line.priority, holdMs: 1500 });
+    const profile = PROFILES[line.intensity] ?? PROFILES.chaos;
+    const shown = this.showBubble({
+      style: 'narrator',
+      text: line.text,
+      priority: line.priority,
+      holdMs: profile.holdMs,
+      popup: profile.popup,
+      face: line.face,
+    });
+    if (shown && profile.sfxChance > 0 && Math.random() < profile.sfxChance) {
+      const pool: SfxName[] = line.intensity === 'savage' ? ['boing', 'hehe', 'blip'] : ['boing', 'blip'];
+      AudioManager.playTroll(pool[Math.floor(Math.random() * pool.length)]);
+    }
   }
 
   /**
    * One speech slot under the top HUD, so popups never stack and never cover the touch pads.
    * A new bubble replaces the current one unless the current one has a higher priority.
    */
-  private showBubble(b: BubbleRequest): void {
-    if (this.toast && this.toastPriority > b.priority) return;
+  private showBubble(b: BubbleRequest): boolean {
+    if (this.toast && this.toastPriority > b.priority) return false;
+    if (b.style === 'death' && this.toast && this.time.now - this.toastShownAt < DEATH_MIN_GAP_MS) return false;
     this.clearToast();
     this.toastReq = b;
     const children: Phaser.GameObjects.GameObject[] = [];
@@ -257,7 +278,8 @@ export class UIScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
     const padX = 20;
-    const w = Math.max(msg.width, title?.width ?? 0) + padX * 2 + (isMilestone ? 44 : 0);
+    const faceW = isNarrator && b.face && this.textures.exists(b.face) ? 36 : 0;
+    const w = Math.max(msg.width, title?.width ?? 0) + padX * 2 + (isMilestone ? 44 : 0) + faceW;
     const h = Math.max(isMilestone ? 72 : isNarrator ? 44 : 40, msg.height + (isMilestone ? 44 : 20));
     const fill = isMilestone ? PALETTE.pink : isNarrator ? PALETTE.lavender : PALETTE.cream;
     const stroke = isMilestone ? 0xffffff : isNarrator ? PALETTE.pink : PALETTE.lavender;
@@ -282,6 +304,13 @@ export class UIScene extends Phaser.Scene {
       const tagBox = this.add.container(-w / 2 + tw / 2 + 10, -h / 2 - 2, [tagBg, tag]);
       children.push(tagBox);
       msg.setY(2);
+      if (faceW) {
+        const face = this.add.image(-w / 2 + 12 + faceW / 2, 1, b.face!).setDisplaySize(30, 30);
+        msg.setX(faceW / 2 - 2);
+        children.push(face);
+        // Small head-bob so the narrator feels alive.
+        this.tweens.add({ targets: face, angle: { from: -8, to: 8 }, duration: 260, yoyo: true, repeat: 2, ease: 'Sine.easeInOut' });
+      }
     }
     if (title) {
       title.setY(-14);
@@ -300,13 +329,30 @@ export class UIScene extends Phaser.Scene {
     toast.setScale(s * 0.6).setAlpha(0);
     this.toast = toast;
     this.toastPriority = b.priority;
-    const intro: object[] = isNarrator
-      ? [
-          { alpha: 1, scale: s * 1.06, duration: 150, ease: 'Back.easeOut' },
-          { scale: s, duration: 120, ease: 'Sine.easeInOut' },
-          { y: pos.y - 4, duration: 140, yoyo: true, ease: 'Sine.easeOut' },
-        ]
-      : [{ alpha: 1, scale: s, duration: 160, ease: 'Back.easeOut' }];
+    this.toastShownAt = this.time.now;
+    let intro: object[];
+    if (!isNarrator) {
+      intro = [{ alpha: 1, scale: s, duration: 160, ease: 'Back.easeOut' }];
+    } else if (b.popup === 'simple') {
+      // Soft: a calm fade in.
+      toast.setScale(s * 0.92);
+      intro = [{ alpha: 1, scale: s, duration: 200, ease: 'Sine.easeOut' }];
+    } else if (b.popup === 'wild') {
+      // Savage: bigger bounce with a wiggle and a couple of sparkles.
+      toast.setScale(s * 0.4);
+      intro = [
+        { alpha: 1, scale: s * 1.14, angle: -4, duration: 170, ease: 'Back.easeOut' },
+        { scale: s, angle: 3, duration: 90, ease: 'Sine.easeInOut' },
+        { angle: 0, duration: 80, ease: 'Sine.easeOut' },
+      ];
+      this.sparkle(toast, w, h);
+    } else {
+      // Chaos: pop and a light bounce.
+      intro = [
+        { alpha: 1, scale: s * 1.06, duration: 150, ease: 'Back.easeOut' },
+        { scale: s, duration: 120, ease: 'Sine.easeInOut' },
+      ];
+    }
     this.tweens.chain({
       targets: toast,
       tweens: [
@@ -318,6 +364,25 @@ export class UIScene extends Phaser.Scene {
         toast.destroy();
       },
     });
+    return true;
+  }
+
+  /** Two tiny stars that pop out of the bubble corners (Savage popup). They live inside the bubble. */
+  private sparkle(toast: Phaser.GameObjects.Container, w: number, h: number): void {
+    for (const side of [-1, 1]) {
+      const star = this.add.image((side * w) / 2, -h / 2, 'star').setDisplaySize(16, 16).setAlpha(0);
+      toast.add(star);
+      this.tweens.add({
+        targets: star,
+        x: (side * w) / 2 + side * 14,
+        y: -h / 2 - 12,
+        alpha: { from: 1, to: 0 },
+        angle: side * 180,
+        duration: 520,
+        delay: 80,
+        ease: 'Quad.easeOut',
+      });
+    }
   }
 
   /**
@@ -404,25 +469,22 @@ export class UIScene extends Phaser.Scene {
 
   private showPause(): void {
     this.closeOverlay();
-    const soundLabel = (): string => `Sound: ${AudioManager.sfxEnabled ? 'ON' : 'OFF'}`;
     const overlay = new Overlay(this, {
       title: 'Paused',
       buttons: [
         { label: 'Resume', fill: 0x8fcbff, onClick: () => this.resume() },
         { label: 'Restart', fill: PALETTE.pink, onClick: () => this.game_.restartLevel() },
-        {
-          label: soundLabel(),
-          fill: PALETTE.lavender,
-          onClick: () => {
-            AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
-            overlay.getButton(2)?.setLabel(soundLabel());
-            this.soundIcon.setTexture(this.soundKey());
-          },
-        },
+        { label: 'Settings', fill: PALETTE.lavender, onClick: () => this.showSettings() },
         { label: 'Main Menu', fill: 0xf7b878, onClick: () => this.game_.quitTo('Menu') },
       ],
     });
     this.overlay = overlay;
+  }
+
+  /** Settings from the pause menu; Close goes back to the pause menu (the game stays paused). */
+  private showSettings(): void {
+    this.closeOverlay();
+    this.overlay = openSettingsOverlay(this, () => this.showPause(), () => this.soundIcon.setTexture(this.soundKey()));
   }
 
   private showComplete(p: LevelCompletePayload): void {

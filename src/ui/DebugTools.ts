@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { INTENSITIES, currentProfile } from '../managers/TrollIntensity';
 import { TONES } from '../config';
 import { DeathReactionManager } from '../managers/DeathReactionManager';
 import { SaveManager } from '../managers/SaveManager';
@@ -83,10 +84,16 @@ export function installDebugTools(host: DebugHost): void {
         say: (kind) => p.debugSay(kind),
         resetCooldown: () => p.debugResetCooldown(),
         nextMilestone: jumpToMilestone,
+        cycleIntensity: () => {
+          const i = INTENSITIES.indexOf(SaveManager.trollIntensity);
+          SaveManager.setTrollIntensity(INTENSITIES[(i + 1) % INTENSITIES.length]);
+          host.notify(`Troll: ${currentProfile().label}`);
+        },
         stats: () => {
           const s = p.stats;
           const trap = Object.entries(s.byTrap).map(([k, v]) => `${k}:${v}`).join(' ') || '-';
-          return `mati/jebakan: ${trap}  ·  cooldown ${Math.ceil(s.cooldownLeftMs / 1000)}s`;
+          const prof = currentProfile();
+          return `${prof.label} (${prof.cooldownMs / 1000}s)  ·  mati/jebakan: ${trap}  ·  sisa cooldown ${Math.ceil(s.cooldownLeftMs / 1000)}s`;
         },
       },
       close,

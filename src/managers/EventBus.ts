@@ -44,6 +44,10 @@ export interface NarratorLine {
   /** Higher wins. Milestones (Death Reaction) use 100. */
   priority: number;
   kind: string;
+  /** Troll Intensity the line was written for (drives bubble style). */
+  intensity: 'soft' | 'chaos' | 'savage';
+  /** Narrator face icon texture key. */
+  face: string;
 }
 
 export interface DeathReactionPayload {
