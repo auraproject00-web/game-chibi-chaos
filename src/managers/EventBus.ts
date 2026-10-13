@@ -6,7 +6,14 @@ export const GameEvents = {
   LevelComplete: 'level-complete',
   Paused: 'paused',
   Resumed: 'resumed',
+  DeathReaction: 'death-reaction',
 } as const;
+
+export interface DeathReactionPayload {
+  message: string;
+  /** Milestone title, when this death hit one. */
+  title?: string;
+}
 
 export interface LevelCompletePayload {
   levelId: number;

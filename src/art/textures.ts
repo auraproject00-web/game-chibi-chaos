@@ -157,6 +157,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     g.lineStyle(2, PALETTE.pink, 0.9);
     g.strokeCircle(32, 32, 21);
   });
+  make(scene, 'confetti', 10, 6, (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(0, 0, 10, 6, 2);
+  });
   make(scene, 'sparkle', 20, 20, (g) => {
     g.fillStyle(0xffffff, 1);
     g.fillPoints(starPoints(10, 10, 9, 3.5, 4), true);

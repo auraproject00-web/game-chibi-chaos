@@ -40,7 +40,7 @@ export class BaitCoinTrap implements Trap {
 
   update(player: Phaser.Geom.Rectangle, ctx: TrapContext): void {
     if (!this.taken && Phaser.Geom.Intersects.RectangleToRectangle(player, this.area)) this.take(ctx);
-    if (this.spikes.hits(player)) ctx.kill();
+    if (this.spikes.hits(player)) ctx.kill('spike');
   }
 
   private take(ctx: TrapContext): void {

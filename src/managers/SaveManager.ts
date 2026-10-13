@@ -104,6 +104,12 @@ class SaveManagerImpl {
     this.persist();
   }
 
+  /** Dev/test helper: jump the total death count (used to try milestones quickly). */
+  setTotalDeaths(n: number): void {
+    this.data.totalDeaths = Math.max(0, Math.floor(n));
+    this.persist();
+  }
+
   /** Records a finished run and unlocks the next level. Returns the best death count. */
   completeLevel(id: number, deaths: number): number {
     const prev = this.getLevel(id);

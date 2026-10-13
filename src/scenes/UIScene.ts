@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { PALETTE, TONES } from '../config';
 import { AudioManager } from '../managers/AudioManager';
-import { EventBus, GameEvents, type LevelCompletePayload } from '../managers/EventBus';
+import { DeathReactionManager } from '../managers/DeathReactionManager';
+import { EventBus, GameEvents, type DeathReactionPayload, type LevelCompletePayload } from '../managers/EventBus';
+import { SaveManager } from '../managers/SaveManager';
 import type { TouchRole } from '../managers/InputManager';
 import { IconButton } from '../ui/Button';
 import { Overlay } from '../ui/Overlay';
@@ -30,6 +32,9 @@ export class UIScene extends Phaser.Scene {
   private deathText!: Phaser.GameObjects.Text;
   private touchHints: Partial<Record<TouchRole, Phaser.GameObjects.Container>> = {};
   private overlay: Overlay | null = null;
+  /** The one death-message popup on screen; a new death replaces it. */
+  private toast: Phaser.GameObjects.Container | null = null;
+  private toastY = 0;
   private isTouch = false;
   private u = 1;
 
@@ -40,6 +45,7 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     this.game_ = this.scene.get('Game') as GameScene;
     this.overlay = null;
+    this.toast = null;
     this.touchHints = {};
     this.isTouch = this.sys.game.device.input.touch;
 
@@ -78,11 +84,14 @@ export class UIScene extends Phaser.Scene {
     EventBus.on(GameEvents.DeathsChanged, this.onDeaths, this);
     EventBus.on(GameEvents.Paused, this.showPause, this);
     EventBus.on(GameEvents.LevelComplete, this.showComplete, this);
+    EventBus.on(GameEvents.DeathReaction, this.showDeathReaction, this);
+    if (import.meta.env.DEV) this.installMilestoneCheat();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.DeathsChanged, this.onDeaths, this);
       EventBus.off(GameEvents.Paused, this.showPause, this);
       EventBus.off(GameEvents.LevelComplete, this.showComplete, this);
+      EventBus.off(GameEvents.DeathReaction, this.showDeathReaction, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.game_.controls?.detachTouch();
     });
@@ -175,7 +184,96 @@ export class UIScene extends Phaser.Scene {
       moveZoneEnd: Math.max(w * 0.4, rightPadX + 90 * u),
     });
 
+    // Death popups sit just under the top HUD row: never over the touch pads at the bottom.
+    this.toastY = top + size + 30 * u;
+    this.toast?.setPosition(w / 2, this.toastY);
+
     this.overlay?.layout(w, h);
+  }
+
+  /**
+   * Small pastel popup with the death message (about 1s), or a bigger one for milestones.
+   * A new death clears the previous popup at once so they never stack.
+   */
+  private showDeathReaction(p: DeathReactionPayload): void {
+    this.clearToast();
+    const milestone = !!p.title;
+    const children: Phaser.GameObjects.GameObject[] = [];
+    const msg = this.add.text(0, 0, p.message, textStyle(milestone ? 17 : 16, TONES.inkCss)).setOrigin(0.5);
+    let title: Phaser.GameObjects.Text | null = null;
+    if (milestone) {
+      title = this.add
+        .text(0, 0, p.title!, textStyle(19, '#ffffff', { stroke: '#c0607a', strokeThickness: 4 }))
+        .setOrigin(0.5);
+    }
+    const padX = 20;
+    const w = Math.max(msg.width, title?.width ?? 0) + padX * 2 + (milestone ? 44 : 0);
+    const h = milestone ? 72 : 40;
+    const bg = this.add.graphics();
+    bg.fillStyle(TONES.ink, 0.18);
+    bg.fillRoundedRect(-w / 2, -h / 2 + 3, w, h, 18);
+    bg.fillStyle(milestone ? PALETTE.pink : PALETTE.cream, 0.97);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 18);
+    bg.lineStyle(2.5, milestone ? 0xffffff : PALETTE.lavender, 1);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
+    children.push(bg);
+    if (title) {
+      title.setY(-14);
+      msg.setY(16);
+      const starL = this.add.image(-w / 2 + 22, 0, 'star').setDisplaySize(24, 24);
+      const starR = this.add.image(w / 2 - 22, 0, 'star').setDisplaySize(24, 24);
+      children.push(starL, starR, title);
+      this.tweens.add({ targets: [starL, starR], angle: 360, duration: 1600, repeat: -1 });
+    }
+    children.push(msg);
+
+    const toast = this.add.container(this.scale.width / 2, this.toastY, children).setDepth(20);
+    const s = this.u;
+    toast.setScale(s * 0.6).setAlpha(0);
+    this.toast = toast;
+    this.tweens.chain({
+      targets: toast,
+      tweens: [
+        { alpha: 1, scale: s, duration: 160, ease: 'Back.easeOut' },
+        { alpha: 0, y: this.toastY - 10, duration: 240, delay: milestone ? 1700 : 720, ease: 'Quad.easeIn' },
+      ],
+      onComplete: () => {
+        if (this.toast === toast) this.toast = null;
+        toast.destroy();
+      },
+    });
+  }
+
+  private clearToast(): void {
+    if (!this.toast) return;
+    this.tweens.killTweensOf(this.toast);
+    this.toast.list.forEach((c) => this.tweens.killTweensOf(c));
+    this.toast.destroy();
+    this.toast = null;
+  }
+
+  /**
+   * Dev builds only: long-press the death counter to jump the total deaths to just before the
+   * next milestone (9, 24, 49, 99, 199…). Die once more to see the milestone.
+   */
+  private installMilestoneCheat(): void {
+    this.deathPill.setSize(90, PILL_H);
+    this.deathPill.setInteractive(new Phaser.Geom.Rectangle(0, -PILL_H / 2, 90, PILL_H), Phaser.Geom.Rectangle.Contains);
+    let timer: Phaser.Time.TimerEvent | null = null;
+    const cancel = (): void => {
+      timer?.remove(false);
+      timer = null;
+    };
+    this.deathPill.on('pointerdown', () => {
+      cancel();
+      timer = this.time.delayedCall(600, () => {
+        const next = DeathReactionManager.nextMilestone(SaveManager.totalDeaths);
+        this.game_.debugSetTotalDeaths(next - 1);
+        this.showDeathReaction({ message: `Tes: total mati = ${next - 1}. Mati 1x lagi!` });
+      });
+    });
+    this.deathPill.on('pointerup', cancel);
+    this.deathPill.on('pointerout', cancel);
   }
 
   private soundKey(): string {

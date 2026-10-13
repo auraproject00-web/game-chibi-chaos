@@ -5,7 +5,8 @@ import { getLevel, hasLevel } from '../levels';
 import { buildLevel, type BuiltLevel } from '../levels/LevelBuilder';
 import type { LevelData } from '../levels/types';
 import { AudioManager } from '../managers/AudioManager';
-import { EventBus, GameEvents, type LevelCompletePayload } from '../managers/EventBus';
+import { DeathReactionManager, type DeathCause, type DeathReaction } from '../managers/DeathReactionManager';
+import { EventBus, GameEvents, type DeathReactionPayload, type LevelCompletePayload } from '../managers/EventBus';
 import { FxManager } from '../managers/FxManager';
 import { InputManager, type ControlFrame } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
@@ -37,6 +38,8 @@ export class GameScene extends Phaser.Scene {
   /** Remaining time of swapped left/right controls (Reverse Controls trap). */
   private reversedMs = 0;
   private dizzyIcon!: Phaser.GameObjects.Image;
+  private reactions = new DeathReactionManager();
+  private pendingReaction: DeathReaction | null = null;
 
   constructor() {
     super('Game');
@@ -48,6 +51,8 @@ export class GameScene extends Phaser.Scene {
     this.state = 'playing';
     this.lookAhead = 0;
     this.reversedMs = 0;
+    this.reactions = new DeathReactionManager();
+    this.pendingReaction = null;
   }
 
   get levelInfo(): { id: number; name: string } {
@@ -84,7 +89,7 @@ export class GameScene extends Phaser.Scene {
       fx: this.fx,
       player: this.player,
       portal: this.world.portal,
-      kill: () => this.killPlayer(),
+      kill: (cause) => this.killPlayer(cause ?? 'trap'),
       reverseControls: (ms) => this.reverseControls(ms),
     };
     this.dizzyIcon = this.add.image(0, 0, 'swirl').setDepth(22).setScale(0.6).setVisible(false);
@@ -185,7 +190,7 @@ export class GameScene extends Phaser.Scene {
     const box = this.player.bounds;
     for (const spike of this.world.spikes) {
       if (spike.hits(box)) {
-        this.killPlayer();
+        this.killPlayer('spike');
         return;
       }
     }
@@ -195,7 +200,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (box.top > this.world.heightPx + 40) {
-      this.killPlayer();
+      this.killPlayer('fall');
       return;
     }
 
@@ -220,22 +225,53 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setFollowOffset(this.lookAhead, 20);
   }
 
-  private killPlayer(): void {
+  private killPlayer(cause: DeathCause): void {
     if (this.state !== 'playing') return;
     this.state = 'dead';
     this.deaths += 1;
     SaveManager.addDeath();
     EventBus.emit(GameEvents.DeathsChanged, this.deaths);
+
+    // Death reaction: face, message and milestones. Never delays the respawn below.
+    const reaction = this.reactions.react(SaveManager.totalDeaths, cause);
+    this.pendingReaction = reaction;
+    const payload: DeathReactionPayload = { message: reaction.message, title: reaction.milestone?.title };
+    EventBus.emit(GameEvents.DeathReaction, payload);
+
     AudioManager.play('death');
     this.clearDizzy();
     this.fx.shake(220, 0.008);
-    this.player.die();
+    const b = this.player.bounds;
+    this.player.die(reaction.deathFace);
+    if (reaction.milestone) {
+      AudioManager.play('hehe');
+      if (reaction.milestone.confetti) this.fx.confetti(b.centerX, b.top);
+    }
     this.time.delayedCall(TIMING.respawnDelayMs, () => this.respawn());
+  }
+
+  /** Milestone faces play right after the respawn pop, so the player sees MOCHI react. */
+  private playMilestoneMood(): void {
+    const m = this.pendingReaction?.milestone;
+    this.pendingReaction = null;
+    if (!m) return;
+    this.player.showMood(m.mood, m.moodMs);
+    const b = this.player.bounds;
+    if (m.mood === 'cry') this.fx.tears(b.centerX, b.top + 14);
+    else if (m.mood === 'angry') this.fx.puff(b.centerX + 14, b.top - 4);
+    else if (m.mood === 'dizzy') this.fx.sparkle(b.centerX, b.top - 6, 8);
+    else if (m.confetti) this.fx.confetti(b.centerX, b.top - 10, 30);
+  }
+
+  /** Dev/test helper: set the total death count so the next death hits a milestone. */
+  debugSetTotalDeaths(n: number): void {
+    SaveManager.setTotalDeaths(n);
   }
 
   private respawn(): void {
     this.world.traps.forEach((t) => t.onRespawn?.());
     this.player.respawn(this.respawnPoint.x, this.respawnPoint.y);
+    this.playMilestoneMood();
     this.lookAhead = 0;
     this.state = 'playing';
   }

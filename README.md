@@ -75,6 +75,18 @@ and the death counter goes up.
 
 In dev (`npm run dev`), open `/?traplab` to play a test level with one of each trap.
 
+## Death reactions
+
+`src/managers/DeathReactionManager.ts` picks what happens on each death: a funny message (no
+repeats among the last four, some depend on the cause: spikes, falling, traps), the MOCHI face for
+the death animation, and milestones on the total death count saved in LocalStorage (10 angry,
+25 crying, 50 dizzy, 100 confetti + troll award, then every 100). Messages, faces and milestones
+are plain data at the top of that file. The popup sits under the top HUD, lasts about a second and
+never delays the respawn.
+
+To test milestones in dev, long-press the skull death counter: the total jumps to one below the
+next milestone (9, 24, 49, 99, 199…), so the next death triggers it.
+
 ## Deploying to Vercel
 
 `vercel.json` sets the Vite framework preset, `npm run build` and `dist` as output. Asset paths are relative (`base: './'`), so the build also works from any static host or sub-path.

@@ -20,6 +20,6 @@ export class SurpriseSpikesTrap implements Trap {
 
   update(player: Phaser.Geom.Rectangle, ctx: TrapContext): void {
     if (this.spikes.update(player)) ctx.fx.shake(120, 0.004);
-    if (this.spikes.hits(player)) ctx.kill();
+    if (this.spikes.hits(player)) ctx.kill('spike');
   }
 }

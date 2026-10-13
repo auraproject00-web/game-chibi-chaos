@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Player } from '../entities/Player';
 import type { FinishPortal } from '../entities/FinishPortal';
+import type { DeathCause } from '../managers/DeathReactionManager';
 import type { FxManager } from '../managers/FxManager';
 
 /**
@@ -104,7 +105,7 @@ export interface TrapContext {
   readonly player: Player;
   readonly portal: FinishPortal;
   /** Kills MOCHI (no-op if already dead). */
-  kill(): void;
+  kill(cause?: DeathCause): void;
   /** Swaps left/right input for `ms` milliseconds. */
   reverseControls(ms: number): void;
 }

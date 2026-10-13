@@ -7,6 +7,8 @@ export class FxManager {
   private readonly dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
   private readonly burstEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
   private readonly sparkleEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confettiEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private dropEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.dustEmitter = scene.add
@@ -70,6 +72,40 @@ export class FxManager {
       onComplete: () => ring.destroy(),
     });
     this.sparkleEmitter.explode(6, x, y);
+  }
+
+  /** Pastel confetti for death milestones. Created on first use; small particle count. */
+  confetti(x: number, y: number, count = 40): void {
+    this.confettiEmitter ??= this.scene.add
+      .particles(0, 0, 'confetti', {
+        lifespan: { min: 900, max: 1400 },
+        speed: { min: 160, max: 380 },
+        angle: { min: 220, max: 320 },
+        rotate: { start: 0, end: 540 },
+        scaleX: { start: 1, end: 0.2 },
+        alpha: { start: 1, end: 0 },
+        tint: [PALETTE.pink, PALETTE.mint, PALETTE.lavender, PALETTE.peach, PALETTE.sky, 0xfff1b8],
+        gravityY: 520,
+        emitting: false,
+      })
+      .setDepth(26);
+    this.confettiEmitter.explode(count, x, y);
+  }
+
+  /** A few tear drops (crying reaction). */
+  tears(x: number, y: number, count = 8): void {
+    this.dropEmitter ??= this.scene.add
+      .particles(0, 0, 'dot', {
+        lifespan: { min: 400, max: 650 },
+        speedX: { min: -90, max: 90 },
+        speedY: { min: -160, max: -80 },
+        scale: { start: 0.45, end: 0.15 },
+        tint: [0xbfe6ff, 0x9ed8ff],
+        gravityY: 700,
+        emitting: false,
+      })
+      .setDepth(25);
+    this.dropEmitter.explode(count, x, y);
   }
 
   /** Cheeky floating word ("Hehe!", "Bonk!") that pops up and drifts away. */
