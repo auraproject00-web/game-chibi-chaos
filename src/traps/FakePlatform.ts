@@ -30,16 +30,20 @@ export class FakePlatform {
     this.gfx = scene.add.image(this.home.x, this.home.y, tex).setDepth(10);
     this.zone = scene.add.zone(x + w / 2, y + h / 2, w, h);
     scene.physics.add.existing(this.zone, true);
-    this.zone.setData('fake', this);
   }
 
   private get staticBody(): Phaser.Physics.Arcade.StaticBody {
     return this.zone.body as Phaser.Physics.Arcade.StaticBody;
   }
 
+  get top(): number {
+    return this.staticBody.top;
+  }
+
   /** Called when MOCHI stands on top. */
-  trigger(): void {
-    if (this.state !== 'idle') return;
+  /** Returns true when this call started the crumble. */
+  trigger(): boolean {
+    if (this.state !== 'idle') return false;
     this.state = 'shaking';
     this.scene.tweens.add({
       targets: this.gfx,
@@ -49,13 +53,14 @@ export class FakePlatform {
       repeat: -1,
     });
     this.timer = this.scene.time.delayedCall(this.delayMs, () => this.fall());
+    return true;
   }
 
   private fall(): void {
     this.state = 'fallen';
     this.scene.tweens.killTweensOf(this.gfx);
     this.staticBody.enable = false;
-    AudioManager.play('crumble');
+    AudioManager.play('fakeFloor');
     this.scene.tweens.add({
       targets: this.gfx,
       y: this.home.y + 420,

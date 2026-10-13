@@ -42,6 +42,9 @@ export class Player {
   popScale = 1;
   /** Extra lift animated by the victory hop. */
   hopY = 0;
+  /** Reaction face shown for a while (death reactions). Visual only. */
+  private mood: MochiFrame | null = null;
+  private moodMs = 0;
   private jumpStartY = 0;
   /** Simple stats the tutorial reads; they never feed back into movement. */
   jumpCount = 0;
@@ -180,8 +183,13 @@ export class Player {
     let shapeX = 1;
     let shapeY = 1;
     let jitter = 0;
+    if (this.moodMs > 0) this.moodMs -= deltaMs;
     if (this.frozen) {
       frame = 'happy';
+    } else if (this.mood && this.moodMs > 0) {
+      // Reaction face: overrides the normal faces only; movement is untouched.
+      frame = this.mood;
+      if (!grounded) this.idleTime = 0;
     } else if (!grounded) {
       this.idleTime = 0;
       if (body.velocity.y < 0) {
@@ -227,15 +235,24 @@ export class Player {
     this.sprite.setRotation((body.velocity.x / PLAYER.maxSpeed) * 0.07);
   }
 
-  /** Funny death: quick flatten, X-eyes pop up, spin away; plus a small puff of particles. */
-  die(): void {
+  /** Shows a reaction face for `ms` with a little jelly kick. Never touches the hitbox. */
+  showMood(face: MochiFrame, ms: number): void {
+    this.mood = face;
+    this.moodMs = ms;
+    this.kick(1.2, 0.82);
+  }
+
+  /** Funny death: quick flatten, reaction face pops up, spin away; plus a small puff of particles. */
+  die(face: MochiFrame = 'dead'): void {
     if (!this.alive) return;
     this.alive = false;
     this.body.setVelocity(0, 0);
     this.body.enable = false;
     const { x, y } = this.sprite;
     const dir = this.facing;
-    this.sprite.setTexture(mochiKey('dead')).setRotation(0);
+    this.mood = null;
+    this.moodMs = 0;
+    this.sprite.setTexture(mochiKey(face)).setRotation(0);
     this.sprite.setScale(BASE_SCALE * 1.35, BASE_SCALE * 0.6);
     this.fx.burst(x, y - 22, 14);
     this.fx.puff(x, y - 22);

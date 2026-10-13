@@ -17,9 +17,31 @@ export type MochiFrame =
   | 'fall'
   | 'panic'
   | 'dead'
-  | 'happy';
+  | 'happy'
+  | 'shock'
+  | 'angry'
+  | 'cry'
+  | 'dizzy'
+  | 'defeat';
 
-export const MOCHI_FRAMES: MochiFrame[] = ['idle', 'blink', 'run1', 'run2', 'run3', 'run4', 'jump', 'fall', 'panic', 'dead', 'happy'];
+export const MOCHI_FRAMES: MochiFrame[] = [
+  'idle',
+  'blink',
+  'run1',
+  'run2',
+  'run3',
+  'run4',
+  'jump',
+  'fall',
+  'panic',
+  'dead',
+  'happy',
+  'shock',
+  'angry',
+  'cry',
+  'dizzy',
+  'defeat',
+];
 
 /** Four-step run cycle: tiny feet alternate quickly. */
 export const RUN_CYCLE: MochiFrame[] = ['run1', 'run2', 'run3', 'run4'];
@@ -82,6 +104,11 @@ function drawMochi(g: Phaser.GameObjects.Graphics, frame: MochiFrame): void {
     panic: [17, 60, 47, 60],
     dead: [22, 61, 42, 61],
     happy: [22, 61, 42, 61],
+    shock: [18, 61, 46, 61],
+    angry: [21, 62, 43, 62],
+    cry: [24, 61, 40, 61],
+    dizzy: [20, 62, 45, 60],
+    defeat: [17, 62, 47, 62],
   };
   const [lx, ly, rx, ry] = feet[frame];
   g.fillStyle(0x7cc98e, 1);
@@ -198,6 +225,113 @@ function drawMochi(g: Phaser.GameObjects.Graphics, frame: MochiFrame): void {
       g.fillStyle(0xff8fab, 1);
       g.fillEllipse(32, 46, 6, 3);
       break;
+    case 'shock': {
+      // Tiny pupils in big white eyes, round "O" mouth and surprise marks.
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(23, 35, 6.5);
+      g.fillCircle(41, 35, 6.5);
+      g.lineStyle(2, TONES.ink, 1);
+      g.strokeCircle(23, 35, 6.5);
+      g.strokeCircle(41, 35, 6.5);
+      g.fillStyle(TONES.ink, 1);
+      g.fillCircle(23, 35, 2);
+      g.fillCircle(41, 35, 2);
+      g.fillStyle(0x8a3550, 1);
+      g.fillEllipse(32, 47, 6, 7.5);
+      g.lineStyle(2, TONES.ink, 1);
+      g.lineBetween(8, 18, 12, 23);
+      g.lineBetween(13, 14, 15.5, 20);
+      g.lineBetween(56, 18, 52, 23);
+      g.lineBetween(51, 14, 48.5, 20);
+      break;
+    }
+    case 'angry': {
+      // Furrowed brows, puffed frown and a little anger mark.
+      drawEyesOpen(g, 8, 9);
+      g.lineStyle(2.8, TONES.ink, 1);
+      g.lineBetween(17, 28, 27, 32);
+      g.lineBetween(47, 28, 37, 32);
+      g.lineStyle(2.2, TONES.ink, 1);
+      g.beginPath();
+      g.arc(32, 49, 4.5, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340));
+      g.strokePath();
+      g.fillStyle(0xff8a9a, 1);
+      g.fillEllipse(14.5, 44, 12, 7);
+      g.fillEllipse(49.5, 44, 12, 7);
+      g.lineStyle(2, 0xe0456a, 1);
+      g.lineBetween(46, 17, 50, 21);
+      g.lineBetween(50, 17, 46, 21);
+      g.lineBetween(48, 15.5, 48, 22.5);
+      break;
+    }
+    case 'cry': {
+      // Squeezed eyes, wobbly mouth and two tear streams.
+      g.lineStyle(2.6, TONES.ink, 1);
+      g.beginPath();
+      g.arc(23, 36, 4.5, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
+      g.strokePath();
+      g.beginPath();
+      g.arc(41, 36, 4.5, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
+      g.strokePath();
+      g.fillStyle(0xbfe6ff, 0.95);
+      g.fillRoundedRect(19.5, 40, 5, 15, 2.5);
+      g.fillRoundedRect(39.5, 40, 5, 15, 2.5);
+      g.fillStyle(0x8a3550, 1);
+      g.fillEllipse(32, 48, 9, 5);
+      g.lineStyle(2, TONES.ink, 1);
+      g.strokePoints(
+        [
+          { x: 27, y: 47 },
+          { x: 29.5, y: 45.5 },
+          { x: 32, y: 47 },
+          { x: 34.5, y: 45.5 },
+          { x: 37, y: 47 },
+        ],
+        false,
+      );
+      break;
+    }
+    case 'dizzy': {
+      // Spiral eyes and a wavy mouth.
+      g.lineStyle(2, TONES.ink, 1);
+      for (const cx of [23, 41]) {
+        g.beginPath();
+        for (let i = 0; i <= 26; i++) {
+          const a = i * 0.48;
+          const r = 0.6 + i * 0.22;
+          const px = cx + Math.cos(a) * r;
+          const py = 36 + Math.sin(a) * r;
+          if (i === 0) g.moveTo(px, py);
+          else g.lineTo(px, py);
+        }
+        g.strokePath();
+      }
+      g.lineStyle(2.2, TONES.ink, 1);
+      g.strokePoints(
+        [
+          { x: 25, y: 47 },
+          { x: 28.5, y: 45 },
+          { x: 32, y: 47 },
+          { x: 35.5, y: 45 },
+          { x: 39, y: 47 },
+        ],
+        false,
+      );
+      break;
+    }
+    case 'defeat': {
+      // Dramatic defeat: ">  <" eyes, big wailing mouth.
+      g.lineStyle(2.6, TONES.ink, 1);
+      g.lineBetween(18, 32, 26, 36);
+      g.lineBetween(26, 36, 18, 40);
+      g.lineBetween(46, 32, 38, 36);
+      g.lineBetween(38, 36, 46, 40);
+      g.fillStyle(0x8a3550, 1);
+      g.fillEllipse(32, 47, 12, 9);
+      g.fillStyle(0xff8fab, 1);
+      g.fillEllipse(32, 50, 7, 3);
+      break;
+    }
     case 'dead':
       g.lineStyle(2.6, TONES.ink, 1);
       g.lineBetween(19, 33, 27, 41);

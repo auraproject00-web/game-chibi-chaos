@@ -3,8 +3,9 @@ import { TILE } from '../config';
 import { PLATFORM_PAD, platformTexture } from '../art/textures';
 import { Checkpoint } from '../entities/Checkpoint';
 import { FinishPortal } from '../entities/FinishPortal';
-import { FakePlatform } from '../traps/FakePlatform';
 import { SpikeTrap } from '../traps/SpikeTrap';
+import { createTrap } from '../traps/TrapFactory';
+import type { Trap } from '../traps/types';
 import { HintBubble } from '../ui/HintBubble';
 import type { PlacedHint } from '../managers/TutorialManager';
 import type { LevelData } from './types';
@@ -14,8 +15,9 @@ export interface BuiltLevel {
   heightPx: number;
   spawn: { x: number; y: number };
   solids: Phaser.Physics.Arcade.StaticGroup;
-  fakePlatforms: FakePlatform[];
+  /** Always-visible spikes. */
   spikes: SpikeTrap[];
+  traps: Trap[];
   checkpoints: Checkpoint[];
   portal: FinishPortal;
   hints: PlacedHint[];
@@ -38,23 +40,15 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
     solids.add(zone);
   }
 
-  const fakePlatforms = (data.fakePlatforms ?? []).map((f) => {
-    const fp = new FakePlatform(scene, f.x * TILE, f.y * TILE, f.w * TILE, f.h * TILE, f.delayMs ?? 350);
-    solids.add(fp.zone);
-    return fp;
-  });
-
   const spikes = (data.spikes ?? []).map(
-    (s) =>
-      new SpikeTrap(scene, {
-        x: s.x * TILE,
-        surfaceY: s.y * TILE,
-        tiles: s.w,
-        hidden: !!s.hidden,
-        triggerFrom: (s.trigger?.from ?? s.x - 0.5) * TILE,
-        triggerTo: (s.trigger?.to ?? s.x + s.w + 0.5) * TILE,
-      }),
+    (s) => new SpikeTrap(scene, { x: s.x * TILE, surfaceY: s.y * TILE, tiles: s.w, hidden: false }),
   );
+
+  const traps = (data.traps ?? []).map((cfg, i) => {
+    const trap = createTrap(scene, cfg, i);
+    trap.solids?.forEach((zone) => solids.add(zone));
+    return trap;
+  });
 
   const checkpoints = (data.checkpoints ?? []).map((c) => new Checkpoint(scene, c.x * TILE + TILE / 2, c.y * TILE));
 
@@ -70,8 +64,8 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
     heightPx: data.height * TILE,
     spawn: { x: data.spawn.x * TILE + TILE / 2, y: data.spawn.y * TILE },
     solids,
-    fakePlatforms,
     spikes,
+    traps,
     checkpoints,
     portal,
     hints,

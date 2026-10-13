@@ -14,6 +14,15 @@ export interface SaveData {
   levels: Record<string, LevelProgress>;
   settings: {
     sfx: boolean;
+    /** Troll Intensity of the narrator. */
+    trollIntensity: 'soft' | 'chaos' | 'savage';
+    /** Narrator voice and troll sound effects (separate from all SFX). */
+    trollSfx: boolean;
+    music: boolean;
+    /** 0..1 */
+    musicVolume: number;
+    /** 0..1 */
+    sfxVolume: number;
   };
   /** Control skills the player has already shown (tutorial hints stay hidden for these). */
   tutorial: Record<string, boolean>;
@@ -25,9 +34,13 @@ function defaults(): SaveData {
     unlockedLevel: 1,
     totalDeaths: 0,
     levels: {},
-    settings: { sfx: true },
+    settings: { sfx: true, trollIntensity: 'chaos', trollSfx: true, music: true, musicVolume: 0.6, sfxVolume: 0.8 },
     tutorial: {},
   };
+}
+
+function clampVolume(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
 }
 
 class SaveManagerImpl {
@@ -76,6 +89,52 @@ class SaveManagerImpl {
     return this.data.settings.sfx;
   }
 
+  get trollIntensity(): 'soft' | 'chaos' | 'savage' {
+    const v = this.data.settings.trollIntensity;
+    return v === 'soft' || v === 'savage' ? v : 'chaos';
+  }
+
+  setTrollIntensity(v: 'soft' | 'chaos' | 'savage'): void {
+    this.data.settings.trollIntensity = v;
+    this.persist();
+  }
+
+  get trollSfxEnabled(): boolean {
+    return this.data.settings.trollSfx !== false;
+  }
+
+  setTrollSfxEnabled(enabled: boolean): void {
+    this.data.settings.trollSfx = enabled;
+    this.persist();
+  }
+
+  get musicEnabled(): boolean {
+    return this.data.settings.music !== false;
+  }
+
+  setMusicEnabled(enabled: boolean): void {
+    this.data.settings.music = enabled;
+    this.persist();
+  }
+
+  get musicVolume(): number {
+    return clampVolume(this.data.settings.musicVolume, 0.6);
+  }
+
+  setMusicVolume(v: number): void {
+    this.data.settings.musicVolume = clampVolume(v, 0.6);
+    this.persist();
+  }
+
+  get sfxVolume(): number {
+    return clampVolume(this.data.settings.sfxVolume, 0.8);
+  }
+
+  setSfxVolume(v: number): void {
+    this.data.settings.sfxVolume = clampVolume(v, 0.8);
+    this.persist();
+  }
+
   setSfxEnabled(enabled: boolean): void {
     this.data.settings.sfx = enabled;
     this.persist();
@@ -101,6 +160,12 @@ class SaveManagerImpl {
 
   addDeath(): void {
     this.data.totalDeaths += 1;
+    this.persist();
+  }
+
+  /** Dev/test helper: jump the total death count (used to try milestones quickly). */
+  setTotalDeaths(n: number): void {
+    this.data.totalDeaths = Math.max(0, Math.floor(n));
     this.persist();
   }
 

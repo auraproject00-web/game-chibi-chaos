@@ -1,16 +1,25 @@
 import Phaser from 'phaser';
-import { MIN_VIEW_WIDTH, TIMING, VIEW_HEIGHT } from '../config';
+import { MIN_VIEW_WIDTH, TILE, TIMING, VIEW_HEIGHT } from '../config';
 import { Player } from '../entities/Player';
 import { getLevel, hasLevel } from '../levels';
 import { buildLevel, type BuiltLevel } from '../levels/LevelBuilder';
 import type { LevelData } from '../levels/types';
 import { AudioManager } from '../managers/AudioManager';
-import { EventBus, GameEvents, type LevelCompletePayload } from '../managers/EventBus';
+import { DeathReactionManager, type DeathCause, type DeathReaction } from '../managers/DeathReactionManager';
+import {
+  EventBus,
+  GameEvents,
+  type DeathContext,
+  type DeathReactionPayload,
+  type LevelCompletePayload,
+  type TrapPassedPayload,
+} from '../managers/EventBus';
 import { FxManager } from '../managers/FxManager';
-import { InputManager } from '../managers/InputManager';
+import { InputManager, type ControlFrame } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
+import { TrollPersonalityManager } from '../managers/TrollPersonalityManager';
 import { TutorialManager } from '../managers/TutorialManager';
-import type { FakePlatform } from '../traps/FakePlatform';
+import { TRAP_DATA_KEY, type Trap, type TrapContext } from '../traps/types';
 import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
 
@@ -33,6 +42,21 @@ export class GameScene extends Phaser.Scene {
   private respawnPoint = { x: 0, y: 0 };
   private state: PlayState = 'playing';
   private lookAhead = 0;
+  private trapCtx!: TrapContext;
+  /** Remaining time of swapped left/right controls (Reverse Controls trap). */
+  private reversedMs = 0;
+  private dizzyIcon!: Phaser.GameObjects.Image;
+  private reactions = new DeathReactionManager();
+  private pendingReaction: DeathReaction | null = null;
+  personality!: TrollPersonalityManager;
+  /** Alive time since the last respawn; null during the first life of the level. */
+  private aliveMs: number | null = null;
+  /** Last trap MOCHI set off (crumbling floor, wobbling plank), to credit a fall that follows. */
+  private lastTriggered: { trap: Trap; at: number } | null = null;
+  /** Game time (sum of clamped frame deltas): consistent with physics even on slow frames. */
+  private gameMs = 0;
+  /** Traps MOCHI was in front of during this life; passing one emits TrapPassed. */
+  private approached = new Set<Trap>();
 
   constructor() {
     super('Game');
@@ -43,6 +67,13 @@ export class GameScene extends Phaser.Scene {
     this.deaths = 0;
     this.state = 'playing';
     this.lookAhead = 0;
+    this.reversedMs = 0;
+    this.reactions = new DeathReactionManager();
+    this.pendingReaction = null;
+    this.aliveMs = null;
+    this.lastTriggered = null;
+    this.gameMs = 0;
+    this.approached = new Set();
   }
 
   get levelInfo(): { id: number; name: string } {
@@ -60,6 +91,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.level = level;
+    AudioManager.playMusic('game');
 
     const touch = this.sys.game.device.input.touch;
     this.fx = new FxManager(this);
@@ -70,6 +102,22 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.respawnPoint.x, this.respawnPoint.y, this.fx);
     this.tutorial = new TutorialManager(this.world.hints, this.player);
     this.physics.add.collider(this.player.hitbox, this.world.solids, this.onSolidContact, undefined, this);
+    const trapBodies = this.world.traps.flatMap((t) => t.bodies ?? []);
+    if (trapBodies.length) {
+      this.physics.add.collider(this.player.hitbox, trapBodies, this.onSolidContact, undefined, this);
+    }
+    this.trapCtx = {
+      scene: this,
+      fx: this.fx,
+      player: this.player,
+      portal: this.world.portal,
+      kill: (cause, source) => this.killPlayer(cause ?? 'trap', source),
+      triggered: (source) => {
+        this.lastTriggered = { trap: source, at: this.gameMs };
+      },
+      reverseControls: (ms) => this.reverseControls(ms),
+    };
+    this.dizzyIcon = this.add.image(0, 0, 'swirl').setDepth(22).setScale(0.6).setVisible(false);
 
     // Camera follows smoothly with a small look-ahead in the facing direction.
     const cam = this.cameras.main;
@@ -80,6 +128,7 @@ export class GameScene extends Phaser.Scene {
     cam.fadeIn(250, 255, 243, 214);
 
     this.controls = new InputManager(this);
+    this.personality = new TrollPersonalityManager(() => this.gameMs);
 
     const bg = this.scene.get('Background') as BackgroundScene;
     bg.setScrollSource(() => cam.worldView.x);
@@ -96,6 +145,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.BLUR, this.onBlur, this);
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.onBlur, this);
       this.controls.destroy();
+      this.personality.destroy();
       bg.setScrollSource(null);
     });
   }
@@ -124,29 +174,63 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== 'complete') this.pauseGame();
   }
 
+  /** Solid bodies that belong to a trap (fake floor, invisible wall, falling plank) report contact. */
   private onSolidContact(_player: unknown, other: unknown): void {
-    const fake = (other as Phaser.GameObjects.Zone).getData?.('fake') as FakePlatform | undefined;
-    if (fake && this.player.body.touching.down) fake.trigger();
+    const trap = (other as Phaser.GameObjects.GameObject).getData?.(TRAP_DATA_KEY) as Trap | undefined;
+    trap?.onContact?.(this.trapCtx);
+  }
+
+  private reverseControls(ms: number): void {
+    this.reversedMs = ms;
+    this.dizzyIcon.setVisible(true).setAlpha(1);
+  }
+
+  private updateDizzy(dt: number): void {
+    if (this.reversedMs <= 0) return;
+    this.reversedMs -= dt;
+    const b = this.player.bounds;
+    this.dizzyIcon.setPosition(b.centerX, b.top - 22).setAngle(this.dizzyIcon.angle + dt * 0.4);
+    // Blink during the last second so the player sees it is about to end.
+    this.dizzyIcon.setAlpha(this.reversedMs < 1000 ? 0.4 + 0.6 * Math.abs(Math.sin(this.reversedMs / 90)) : 1);
+    if (this.reversedMs <= 0) this.clearDizzy();
+  }
+
+  private clearDizzy(): void {
+    this.reversedMs = 0;
+    this.dizzyIcon.setVisible(false);
+  }
+
+  get controlsReversed(): boolean {
+    return this.reversedMs > 0;
   }
 
   update(_time: number, delta: number): void {
     if (this.state !== 'playing') return;
     // Clamp delta so a long frame (tab switch) cannot tunnel the player through floors.
     const dt = Math.min(delta, 50);
-    this.player.update(dt, this.controls.read());
+    const input = this.controls.read();
+    const noInput = input.moveX === 0 && !input.jumpHeld;
+    if (this.reversedMs > 0) input.moveX = (input.moveX === 0 ? 0 : -input.moveX) as ControlFrame['moveX'];
+    this.player.update(dt, input);
+    this.updateDizzy(dt);
 
     this.tutorial.update();
     const box = this.player.bounds;
-    for (const spike of this.world.spikes) {
-      if (spike.update(box)) this.fx.shake(120, 0.004);
+    this.gameMs += dt;
+    if (this.aliveMs !== null) this.aliveMs += dt;
+    for (const [i, spike] of this.world.spikes.entries()) {
       if (spike.hits(box)) {
-        this.killPlayer();
+        this.killPlayer('spike', undefined, i);
         return;
       }
     }
+    for (const trap of this.world.traps) {
+      trap.update?.(box, this.trapCtx);
+      if (this.state !== 'playing') return;
+    }
 
     if (box.top > this.world.heightPx + 40) {
-      this.killPlayer();
+      this.killPlayer('fall');
       return;
     }
 
@@ -165,27 +249,118 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.trackTrapsPassed(box);
+    this.personality.update(dt, {
+      still: noInput && this.player.onGround && Math.abs(this.player.body.velocity.x) < 5,
+      safe: this.isSafeSpot(box),
+    });
+
     // Look-ahead follow offset.
     const target = -this.player.facingDir * 70;
     this.lookAhead += (target - this.lookAhead) * Math.min(1, dt / 400);
     this.cameras.main.setFollowOffset(this.lookAhead, 20);
   }
 
-  private killPlayer(): void {
+  /** Emits TrapPassed once when MOCHI gets past a trap it was in front of during this life. */
+  private trackTrapsPassed(box: Phaser.Geom.Rectangle): void {
+    for (const trap of this.world.traps) {
+      if (!trap.span) continue;
+      if (box.centerX < trap.span.left) this.approached.add(trap);
+      else if (box.left > trap.span.right + 4 && this.approached.delete(trap)) {
+        const payload: TrapPassedPayload = { trapId: trap.id, trapType: trap.type };
+        EventBus.emit(GameEvents.TrapPassed, payload);
+      }
+    }
+  }
+
+  /** Not on or right next to a trap or spikes: the only places an idle comment may happen. */
+  private isSafeSpot(box: Phaser.Geom.Rectangle): boolean {
+    const margin = 1.5 * TILE;
+    const near = (l: number, r: number): boolean => box.right > l - margin && box.left < r + margin;
+    if (this.world.traps.some((t) => t.span && near(t.span.left, t.span.right))) return false;
+    if (this.world.spikes.some((s) => near(s.left, s.right))) return false;
+    return this.reversedMs <= 0;
+  }
+
+  private killPlayer(cause: DeathCause, source?: Trap, staticSpikeIndex?: number): void {
     if (this.state !== 'playing') return;
     this.state = 'dead';
     this.deaths += 1;
     SaveManager.addDeath();
     EventBus.emit(GameEvents.DeathsChanged, this.deaths);
+
+    // Death reaction: face, message and milestones. Never delays the respawn below.
+    const reaction = this.reactions.react(SaveManager.totalDeaths, cause);
+    this.pendingReaction = reaction;
+    const payload: DeathReactionPayload = { message: reaction.message, title: reaction.milestone?.title };
+    EventBus.emit(GameEvents.DeathReaction, payload);
+
+    // Narrator facts: the real cause and trap, never guessed from position when known.
+    const b0 = this.player.bounds;
+    let trapId: string | null = null;
+    let trapType: string | null = null;
+    if (source) {
+      trapId = source.id;
+      trapType = source.type;
+    } else if (staticSpikeIndex !== undefined) {
+      trapId = `spike-${staticSpikeIndex}`;
+      trapType = 'spike';
+    } else if (cause === 'fall' && this.lastTriggered && this.gameMs - this.lastTriggered.at < 3000) {
+      trapId = this.lastTriggered.trap.id;
+      trapType = this.lastTriggered.trap.type;
+    }
+    const ctx: DeathContext = {
+      cause,
+      trapId,
+      trapType,
+      x: b0.centerX,
+      y: b0.bottom,
+      sinceRespawnMs: this.aliveMs,
+      distToFinish: Math.abs(b0.centerX - this.world.portal.center.x),
+      levelDeaths: this.deaths,
+      totalDeaths: SaveManager.totalDeaths,
+      milestone: !!reaction.milestone,
+    };
+    EventBus.emit(GameEvents.PlayerDied, ctx);
+    this.lastTriggered = null;
+
     AudioManager.play('death');
+    this.clearDizzy();
     this.fx.shake(220, 0.008);
-    this.player.die();
+    const b = this.player.bounds;
+    this.player.die(reaction.deathFace);
+    if (reaction.milestone) {
+      AudioManager.playTroll('hehe');
+      if (reaction.milestone.confetti) this.fx.confetti(b.centerX, b.top);
+    }
     this.time.delayedCall(TIMING.respawnDelayMs, () => this.respawn());
   }
 
+  /** Milestone faces play right after the respawn pop, so the player sees MOCHI react. */
+  private playMilestoneMood(): void {
+    const m = this.pendingReaction?.milestone;
+    this.pendingReaction = null;
+    if (!m) return;
+    this.player.showMood(m.mood, m.moodMs);
+    const b = this.player.bounds;
+    if (m.mood === 'cry') this.fx.tears(b.centerX, b.top + 14);
+    else if (m.mood === 'angry') this.fx.puff(b.centerX + 14, b.top - 4);
+    else if (m.mood === 'dizzy') this.fx.sparkle(b.centerX, b.top - 6, 8);
+    else if (m.confetti) this.fx.confetti(b.centerX, b.top - 10, 30);
+  }
+
+  /** Dev/test helper: set the total death count so the next death hits a milestone. */
+  debugSetTotalDeaths(n: number): void {
+    SaveManager.setTotalDeaths(n);
+  }
+
   private respawn(): void {
-    this.world.fakePlatforms.forEach((fp) => fp.reset());
+    this.world.traps.forEach((t) => t.onRespawn?.());
     this.player.respawn(this.respawnPoint.x, this.respawnPoint.y);
+    this.playMilestoneMood();
+    this.aliveMs = 0;
+    this.approached.clear();
+    EventBus.emit(GameEvents.PlayerRespawned);
     this.lookAhead = 0;
     this.state = 'playing';
   }

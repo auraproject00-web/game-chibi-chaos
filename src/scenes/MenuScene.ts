@@ -8,6 +8,7 @@ import { SaveManager } from '../managers/SaveManager';
 import type { BackgroundScene } from './BackgroundScene';
 import { Button } from '../ui/Button';
 import { Overlay } from '../ui/Overlay';
+import { openSettingsOverlay } from '../ui/SettingsOverlay';
 import { textStyle } from '../ui/text';
 
 const TITLE_COLORS = ['#FF9FB6', '#9FE3AE', '#FFC98A', '#8FCBFF', '#C3A6FF', '#FF9FB6'];
@@ -23,6 +24,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     (this.scene.get('Background') as BackgroundScene).setScrollSource(null);
     this.overlay = null;
+    AudioManager.playMusic('menu');
     const { width: w, height: h } = this.scale;
     const landscape = w >= h * 1.05;
     const s = landscape
@@ -78,9 +80,42 @@ export class MenuScene extends Phaser.Scene {
         .setAlpha(0.75);
     }
 
+    this.makeSoundHint(bx, h - 32 * s, s);
+
     this.cameras.main.fadeIn(250, 255, 243, 214);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this));
+  }
+
+  /**
+   * Browsers only allow sound after the first tap. Until then a small pill says so; it fades out
+   * as soon as audio is running (or never shows when the player muted everything).
+   */
+  private makeSoundHint(x: number, y: number, s: number): void {
+    if (AudioManager.isRunning || !AudioManager.anyEnabled) return;
+    const text = this.add.text(0, 0, 'Ketuk layar untuk menyalakan suara', textStyle(15 * Math.max(s, 0.8), TONES.inkCss)).setOrigin(0.5);
+    const icon = this.add.image(0, 0, 'icon_sound_on').setDisplaySize(20 * Math.max(s, 0.8), 20 * Math.max(s, 0.8)).setTint(TONES.lavenderDark);
+    const w = text.width + icon.displayWidth + 34;
+    const hgt = text.height + 12;
+    icon.setX(-w / 2 + 14 + icon.displayWidth / 2);
+    text.setX(icon.x + icon.displayWidth / 2 + 6 + text.width / 2);
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.cream, 0.92);
+    bg.fillRoundedRect(-w / 2, -hgt / 2, w, hgt, hgt / 2);
+    bg.lineStyle(2, PALETTE.lavender, 1);
+    bg.strokeRoundedRect(-w / 2, -hgt / 2, w, hgt, hgt / 2);
+    const pill = this.add.container(x, y, [bg, icon, text]).setDepth(50);
+    this.tweens.add({ targets: pill, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const check = this.time.addEvent({
+      delay: 200,
+      loop: true,
+      callback: () => {
+        if (!AudioManager.isRunning) return;
+        check.remove(false);
+        this.tweens.killTweensOf(pill);
+        this.tweens.add({ targets: pill, alpha: 0, y: y + 10, duration: 250, onComplete: () => pill.destroy() });
+      },
+    });
   }
 
   private makeTitle(cx: number, cy: number, s: number): void {
@@ -136,24 +171,7 @@ export class MenuScene extends Phaser.Scene {
 
   private openSettings(): void {
     this.closeOverlay();
-    const label = (): string => `Sound FX: ${AudioManager.sfxEnabled ? 'ON' : 'OFF'}`;
-    const overlay = new Overlay(this, {
-      title: 'Settings',
-      body: 'Musik latar menyusul setelah evaluasi MVP.',
-      buttons: [
-        {
-          label: label(),
-          fill: 0x8fcbff,
-          onClick: () => {
-            AudioManager.setSfxEnabled(!AudioManager.sfxEnabled);
-            overlay.getButton(0)?.setLabel(label());
-            AudioManager.play('click');
-          },
-        },
-        { label: 'Close', onClick: () => this.closeOverlay() },
-      ],
-    });
-    this.overlay = overlay;
+    this.overlay = openSettingsOverlay(this, () => this.closeOverlay());
   }
 
   private openCredits(): void {

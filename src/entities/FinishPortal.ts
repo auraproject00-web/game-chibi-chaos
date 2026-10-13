@@ -5,11 +5,12 @@ export class FinishPortal {
   readonly area: Phaser.Geom.Rectangle;
   readonly center: Phaser.Math.Vector2;
   private readonly portal: Phaser.GameObjects.Image;
+  private readonly glow: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene, x: number, bottomY: number) {
     const cy = bottomY - 46;
     this.center = new Phaser.Math.Vector2(x, cy);
-    const glow = scene.add.image(x, cy, 'glow').setDepth(11).setTint(0xcdb4ff).setScale(1.3);
+    const glow = (this.glow = scene.add.image(x, cy, 'glow').setDepth(11).setTint(0xcdb4ff).setScale(1.3));
     this.portal = scene.add.image(x, cy, 'portal').setDepth(12);
     scene.tweens.add({ targets: this.portal, angle: 360, duration: 3200, repeat: -1 });
     scene.tweens.add({
@@ -30,6 +31,37 @@ export class FinishPortal {
       ease: 'Sine.easeInOut',
     });
     this.area = new Phaser.Geom.Rectangle(x - 22, cy - 34, 44, 80);
+  }
+
+  /**
+   * Running Portal: hops in an arc to a new spot. It cannot be entered while in the air,
+   * so MOCHI never "wins" by accident halfway through the hop.
+   */
+  runTo(scene: Phaser.Scene, x: number, bottomY: number): void {
+    const cy = bottomY - 46;
+    const sx = this.center.x;
+    const sy = this.center.y;
+    this.area.setEmpty();
+    const arc = Math.max(70, Math.abs(cy - sy) + 60);
+    const state = { t: 0 };
+    scene.tweens.add({
+      targets: state,
+      t: 1,
+      duration: 460,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        const px = sx + (x - sx) * state.t;
+        const py = sy + (cy - sy) * state.t - Math.sin(Math.PI * state.t) * arc;
+        this.portal.setPosition(px, py);
+        this.glow.setPosition(px, py);
+      },
+      onComplete: () => {
+        this.center.set(x, cy);
+        this.area.setTo(x - 22, cy - 34, 44, 80);
+        this.portal.setPosition(x, cy);
+        this.glow.setPosition(x, cy);
+      },
+    });
   }
 
   /** Little "gulp" when MOCHI enters. */

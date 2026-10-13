@@ -119,6 +119,30 @@ export function platformTexture(scene: Phaser.Scene, w: number, h: number, crack
   return key;
 }
 
+/** Height in px of a falling-platform plank. */
+export const PLANK_H = 18;
+
+/** Wooden plank for falling platforms: warm peach wood, so it never reads as solid grass. */
+export function plankTexture(scene: Phaser.Scene, w: number): string {
+  const key = `plank_${w}`;
+  if (!scene.textures.exists(key)) {
+    make(scene, key, w, PLANK_H, (g) => {
+      g.fillStyle(0xf2b880, 1);
+      g.fillRoundedRect(0, 0, w, PLANK_H, 6);
+      g.fillStyle(0xffd6a8, 1);
+      g.fillRoundedRect(3, 2, w - 6, 4, 2);
+      g.lineStyle(1.5, 0xc98a5a, 0.8);
+      for (let x = 24; x < w - 8; x += 26) g.lineBetween(x, 5, x, PLANK_H - 4);
+      g.fillStyle(0xa86f45, 1);
+      g.fillCircle(7, PLANK_H / 2 + 1, 2);
+      g.fillCircle(w - 7, PLANK_H / 2 + 1, 2);
+      g.lineStyle(2, 0xa86f45, 1);
+      g.strokeRoundedRect(1, 1, w - 2, PLANK_H - 2, 6);
+    });
+  }
+  return key;
+}
+
 export function generateTextures(scene: Phaser.Scene): void {
   generateMochiTextures(scene);
 
@@ -132,6 +156,10 @@ export function generateTextures(scene: Phaser.Scene): void {
     g.strokeCircle(32, 32, 26);
     g.lineStyle(2, PALETTE.pink, 0.9);
     g.strokeCircle(32, 32, 21);
+  });
+  make(scene, 'confetti', 10, 6, (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(0, 0, 10, 6, 2);
   });
   make(scene, 'sparkle', 20, 20, (g) => {
     g.fillStyle(0xffffff, 1);
@@ -190,6 +218,151 @@ export function generateTextures(scene: Phaser.Scene): void {
     });
   flag('flag_off', 0xe5dcf3, 0xb3a3d0, false);
   flag('flag_on', PALETTE.pink, TONES.pinkDark, true);
+
+  // Fake checkpoint: same colors as an unused flag, but the pole leans (the learnable tell).
+  // Once exposed it becomes a cheeky flag sticking its tongue out.
+  const crookedFlag = (key: string, color: number, dark: number, troll: boolean): void =>
+    make(scene, key, 48, 72, (g) => {
+      g.fillStyle(0x9c6b4a, 1);
+      g.fillPoints(
+        [
+          { x: 10, y: 70 },
+          { x: 15, y: 70 },
+          { x: 19, y: 8 },
+          { x: 14, y: 8 },
+        ],
+        true,
+      );
+      g.fillStyle(PALETTE.cream, 1);
+      g.fillCircle(16.5, 8, 4.5);
+      g.lineStyle(1.5, 0x7a5038, 1);
+      g.strokeCircle(16.5, 8, 4.5);
+      const tri: Pt[] = [
+        { x: 19, y: 12 },
+        { x: 46, y: 24 },
+        { x: 18, y: 34 },
+      ];
+      g.fillStyle(color, 1);
+      g.fillPoints(tri, true);
+      g.lineStyle(2, dark, 1);
+      g.strokePoints(tri, true);
+      if (troll) {
+        g.fillStyle(TONES.ink, 1);
+        g.fillCircle(25, 20, 1.8);
+        g.fillCircle(31, 21, 1.8);
+        g.fillStyle(0xff6f91, 1);
+        g.fillEllipse(28.5, 28, 6, 5);
+      }
+      g.fillStyle(TONES.grass, 1);
+      g.fillEllipse(12.5, 70, 22, 6);
+    });
+  crookedFlag('flag_fake', 0xe5dcf3, 0xb3a3d0, false);
+  crookedFlag('flag_troll', PALETTE.peach, 0xd98b4a, true);
+
+  // Bait coin.
+  make(scene, 'coin', 26, 26, (g) => {
+    g.fillStyle(0xe0a83a, 1);
+    g.fillCircle(13, 13, 12);
+    g.fillStyle(0xffd86b, 1);
+    g.fillCircle(13, 13, 9.5);
+    g.fillStyle(0xfff1b8, 1);
+    g.fillPoints(starPoints(13, 13, 6, 2.6), true);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillEllipse(8.5, 8, 4, 2.5);
+    g.lineStyle(1.5, 0xb57f22, 1);
+    g.strokeCircle(13, 13, 12);
+  });
+
+  // Narrator face icons for the speech bubble (the narrator has no body, just a cheeky face).
+  const face = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void, horns = false): void =>
+    make(scene, key, 36, 36, (g) => {
+      if (horns) {
+        g.fillStyle(0xf28aa8, 1);
+        g.fillTriangle(7, 11, 10, 1, 15, 8);
+        g.fillTriangle(29, 11, 26, 1, 21, 8);
+      }
+      g.fillStyle(0xfff3fb, 1);
+      g.fillCircle(18, 19, 15);
+      g.lineStyle(2.5, 0xf28aa8, 1);
+      g.strokeCircle(18, 19, 15);
+      g.fillStyle(PALETTE.pink, 0.9);
+      g.fillEllipse(9.5, 23, 6, 3.5);
+      g.fillEllipse(26.5, 23, 6, 3.5);
+      g.lineStyle(2, TONES.ink, 1);
+      g.fillStyle(TONES.ink, 1);
+      draw(g);
+    });
+  const arc = (g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, a0: number, a1: number): void => {
+    g.beginPath();
+    g.arc(x, y, r, Phaser.Math.DegToRad(a0), Phaser.Math.DegToRad(a1));
+    g.strokePath();
+  };
+  face('nar_smile', (g) => {
+    g.fillCircle(13, 17, 2);
+    g.fillCircle(23, 17, 2);
+    arc(g, 18, 21, 4.5, 20, 160);
+  });
+  face('nar_smirk', (g) => {
+    g.lineBetween(10, 17, 15, 16);
+    g.fillCircle(23, 17, 2);
+    g.lineBetween(14, 25, 23, 22);
+  });
+  face('nar_laugh', (g) => {
+    arc(g, 13, 18, 3, 200, 340);
+    arc(g, 23, 18, 3, 200, 340);
+    g.fillStyle(0x8a3550, 1);
+    g.beginPath();
+    g.arc(18, 22, 5.5, 0, Math.PI, false);
+    g.closePath();
+    g.fillPath();
+  });
+  face('nar_shock', (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(13, 17, 3.6);
+    g.fillCircle(23, 17, 3.6);
+    g.strokeCircle(13, 17, 3.6);
+    g.strokeCircle(23, 17, 3.6);
+    g.fillStyle(TONES.ink, 1);
+    g.fillCircle(13, 17, 1.4);
+    g.fillCircle(23, 17, 1.4);
+    g.fillStyle(0x8a3550, 1);
+    g.fillEllipse(18, 26, 5, 6);
+  });
+  face('nar_sleepy', (g) => {
+    g.lineBetween(10, 18, 16, 18);
+    g.lineBetween(20, 18, 26, 18);
+    g.strokeCircle(18, 25, 2);
+  });
+  face(
+    'nar_devil',
+    (g) => {
+      g.lineBetween(9, 13, 15, 16);
+      g.lineBetween(27, 13, 21, 16);
+      g.fillCircle(13, 18, 2);
+      g.fillCircle(23, 18, 2);
+      arc(g, 18, 21, 5.5, 15, 165);
+    },
+    true,
+  );
+
+  // Reverse-controls swirl.
+  make(scene, 'swirl', 34, 34, (g) => {
+    g.fillStyle(PALETTE.lavender, 1);
+    g.fillCircle(17, 17, 15);
+    g.lineStyle(2, TONES.lavenderDark, 1);
+    g.strokeCircle(17, 17, 15);
+    g.lineStyle(2.6, 0xffffff, 1);
+    g.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const a = i * 0.32;
+      const r = 1.5 + i * 0.3;
+      const px = 17 + Math.cos(a) * r;
+      const py = 17 + Math.sin(a) * r;
+      if (i === 0) g.moveTo(px, py);
+      else g.lineTo(px, py);
+    }
+    g.strokePath();
+  });
 
   // Finish portal.
   make(scene, 'portal', 72, 72, (g) => {

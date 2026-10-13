@@ -18,6 +18,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
   create(): void {
     (this.scene.get('Background') as BackgroundScene).setScrollSource(null);
+    AudioManager.playMusic('menu');
     const { width: w, height: h } = this.scale;
     const portrait = h > w;
     const cols = portrait ? 3 : 5;
