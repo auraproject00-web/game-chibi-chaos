@@ -1,2 +1,63 @@
-# game-chibi-chaos
-Game penuh jebakan yang bikin pemain gregetan 
+# CHIBI CHAOS
+
+> Cute Outside, Chaos Inside.
+
+Game penuh jebakan yang bikin pemain gregetan.
+
+2D troll / precision platformer for mobile and desktop browsers, starring **MOCHI**.
+Built with Phaser 3, TypeScript and Vite. Static build, ready for Vercel.
+
+## Run locally
+
+Requires Node.js 18+ (tested on Node 22).
+
+```bash
+npm install
+npm run dev      # dev server at http://localhost:5173 (also reachable from a phone on the same Wi-Fi)
+npm run build    # type-check + production build into dist/
+npm run preview  # serve the production build locally
+```
+
+## Controls
+
+| | Desktop | Mobile |
+|---|---|---|
+| Move | A / D or ← / → | Hold the ◀ ▶ pads at the bottom left (slide your thumb to switch direction) |
+| Jump | Space, W or ↑ (hold longer = higher) | Tap anywhere on the right side (hold = higher) |
+| Pause | Esc or P, or the pause button | Pause button |
+| Restart | R or the restart button | Restart button |
+
+Multi-touch is supported: keep one thumb on the move zone and tap jump with the other.
+
+## Project structure
+
+```
+src/
+  main.ts                 Phaser config, scene list
+  config.ts               Palette, tile size, player physics tuning
+  art/                    Procedural placeholder art (MOCHI frames, platforms, icons, backgrounds)
+  scenes/                 Boot, Background (parallax), Menu, LevelSelect, Game, UI (HUD)
+  entities/               Player (MOCHI), Checkpoint, FinishPortal
+  traps/                  FakePlatform, SpikeTrap (visible + hidden)
+  levels/                 Level data (data-driven), registry, LevelBuilder
+  managers/               Input, Audio (Web Audio synth), Save (LocalStorage), FX, EventBus
+  ui/                     Button, Overlay, HintBubble, text helpers
+public/
+  assets/                 Final art and audio go here (characters, backgrounds, obstacles, audio)
+```
+
+## Adding a level
+
+1. Create `src/levels/levelNN.ts` exporting a `LevelData` object (see `src/levels/types.ts`; coordinates are in tiles of 32 px).
+2. Add it to `LEVELS` in `src/levels/index.ts`.
+
+No changes to the core systems are needed.
+
+## Deploying to Vercel
+
+`vercel.json` sets the Vite framework preset, `npm run build` and `dist` as output. Asset paths are relative (`base: './'`), so the build also works from any static host or sub-path.
+
+## Mobile
+
+Gameplay is landscape-only on phones; in portrait a "rotate your phone" screen is shown and the game pauses.
+HUD and touch pads respect the iPhone safe area. Adding the site to the home screen launches it fullscreen in landscape (`public/manifest.webmanifest`).
