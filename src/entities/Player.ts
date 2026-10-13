@@ -5,7 +5,8 @@ import type { ControlFrame } from '../managers/InputManager';
 import type { FxManager } from '../managers/FxManager';
 import { AudioManager } from '../managers/AudioManager';
 
-const BASE_SCALE = 0.78;
+/** Visual scale of the 64px MOCHI texture (about 25% larger than the first prototype). */
+const BASE_SCALE = 0.98;
 
 /**
  * MOCHI. Physics lives on an invisible zone (stable hitbox); the visible sprite follows it
@@ -184,7 +185,7 @@ export class Player {
     this.body.enable = false;
     const { x, y } = this.sprite;
     this.sprite.setTexture(mochiKey('dead')).setRotation(0);
-    this.fx.burst(x, y - 18);
+    this.fx.burst(x, y - 24);
     this.scene.tweens.add({
       targets: this.sprite,
       y: y - 46,

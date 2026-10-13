@@ -8,7 +8,7 @@ let bubbleCount = 0;
 export class HintBubble extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number, y: number, text: string) {
     super(scene, x, y);
-    const label = scene.add.text(0, 0, text, textStyle(17, TONES.inkCss, { align: 'center', wordWrap: { width: 260 } })).setOrigin(0.5);
+    const label = scene.add.text(0, 0, text, textStyle(15, TONES.inkCss, { align: 'center', wordWrap: { width: 230 } })).setOrigin(0.5);
     const w = Math.ceil(label.width + 28);
     const h = Math.ceil(label.height + 18);
     const pad = 3;

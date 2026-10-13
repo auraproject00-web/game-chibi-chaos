@@ -9,20 +9,28 @@ export interface ControlFrame {
 
 export type TouchRole = 'left' | 'right' | 'jump';
 
-/** Fraction of the screen width, from the left edge, used for movement. */
-export const MOVE_ZONE = { leftEnd: 0.2, rightEnd: 0.4 } as const;
+/**
+ * Screen-space layout of the touch controls, set by the HUD from its pad positions.
+ * Fingers left of `moveZoneEnd` steer: left of `splitX` = walk left, right of it = walk right.
+ * Everywhere else is the jump area.
+ */
+export interface TouchLayout {
+  splitX: number;
+  moveZoneEnd: number;
+}
 
 /**
  * Merges keyboard (A/D, arrows, Space/W/Up) and multi-touch input.
- * Touch layout: hold the left 20% of the screen to go left, the next 20% to go right,
- * tap anywhere else to jump (hold for a higher jump). Every finger is tracked separately,
- * so moving and jumping at the same time works.
+ * Touch layout: the bottom-left area steers (left/right of the thumb's resting point), tap
+ * anywhere else to jump (hold for a higher jump). Every finger is tracked separately, so you
+ * can keep walking while jumping with the other thumb.
  */
 export class InputManager {
   private readonly keys: Record<'left' | 'right' | 'a' | 'd' | 'up' | 'w' | 'space', Phaser.Input.Keyboard.Key> | null;
   private readonly touches = new Map<number, TouchRole>();
   private jumpQueued = false;
   private touchScene: Phaser.Scene | null = null;
+  private layout: TouchLayout = { splitX: 120, moveZoneEnd: 300 };
   enabled = true;
 
   constructor(scene: Phaser.Scene) {
@@ -74,11 +82,13 @@ export class InputManager {
     return new Set(this.touches.values());
   }
 
+  setTouchLayout(layout: TouchLayout): void {
+    this.layout = layout;
+  }
+
   private classify(pointer: Phaser.Input.Pointer): TouchRole {
-    const w = this.touchScene?.scale.width ?? window.innerWidth;
-    const fx = pointer.x / w;
-    if (fx < MOVE_ZONE.leftEnd) return 'left';
-    if (fx < MOVE_ZONE.rightEnd) return 'right';
+    if (pointer.x < this.layout.splitX) return 'left';
+    if (pointer.x < this.layout.moveZoneEnd) return 'right';
     return 'jump';
   }
 
@@ -92,9 +102,9 @@ export class InputManager {
   private onMove(pointer: Phaser.Input.Pointer): void {
     const role = this.touches.get(pointer.id);
     if (!role || role === 'jump') return;
-    // A movement finger can slide between left and right, but never turns into a jump.
-    const next = this.classify(pointer);
-    if (next !== 'jump') this.touches.set(pointer.id, next);
+    // A steering finger can slide between left and right (even past the zone edge),
+    // but never turns into a jump.
+    this.touches.set(pointer.id, pointer.x < this.layout.splitX ? 'left' : 'right');
   }
 
   private onUp(pointer: Phaser.Input.Pointer): void {

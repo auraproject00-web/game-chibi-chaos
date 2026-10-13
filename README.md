@@ -22,8 +22,8 @@ npm run preview  # serve the production build locally
 
 | | Desktop | Mobile |
 |---|---|---|
-| Move | A / D or ← / → | Hold the left 20% of the screen (left) or the next 20% (right) |
-| Jump | Space, W or ↑ (hold longer = higher) | Tap anywhere on the right 60% (hold = higher) |
+| Move | A / D or ← / → | Hold the ◀ ▶ pads at the bottom left (slide your thumb to switch direction) |
+| Jump | Space, W or ↑ (hold longer = higher) | Tap anywhere on the right side (hold = higher) |
 | Pause | Esc or P, or the pause button | Pause button |
 | Restart | R or the restart button | Restart button |
 
@@ -56,3 +56,8 @@ No changes to the core systems are needed.
 ## Deploying to Vercel
 
 `vercel.json` sets the Vite framework preset, `npm run build` and `dist` as output. Asset paths are relative (`base: './'`), so the build also works from any static host or sub-path.
+
+## Mobile
+
+Gameplay is landscape-only on phones; in portrait a "rotate your phone" screen is shown and the game pauses.
+HUD and touch pads respect the iPhone safe area. Adding the site to the home screen launches it fullscreen in landscape (`public/manifest.webmanifest`).

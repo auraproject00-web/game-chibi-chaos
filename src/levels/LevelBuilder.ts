@@ -60,7 +60,7 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
 
   for (const hint of data.hints ?? []) {
     const text = touchHints && hint.touchText ? hint.touchText : hint.text;
-    new HintBubble(scene, hint.x * TILE + TILE / 2, hint.y * TILE - 96, text);
+    new HintBubble(scene, hint.x * TILE + TILE / 2, hint.y * TILE - 104, text);
   }
 
   return {

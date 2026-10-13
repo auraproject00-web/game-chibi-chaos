@@ -2,10 +2,13 @@
 
 export const TILE = 32;
 
-/** Vertical slice of the world (in world px) the camera tries to show. */
-export const VIEW_HEIGHT = 540;
-/** Minimum horizontal slice of the world shown on narrow (portrait) screens. */
-export const MIN_VIEW_WIDTH = 640;
+/**
+ * Vertical slice of the world (in world px) the camera tries to show. Kept tight so the
+ * platforms and traps fill the screen instead of empty sky (the ground sits at the bottom).
+ */
+export const VIEW_HEIGHT = 360;
+/** Minimum horizontal slice of the world kept visible, so very wide screens do not over-zoom. */
+export const MIN_VIEW_WIDTH = 700;
 
 export const FONT = '"Fredoka", "Baloo 2", "Trebuchet MS", "Segoe UI", sans-serif';
 
@@ -41,8 +44,8 @@ export const TONES = {
 
 export const PLAYER = {
   /** Hitbox in world px. */
-  width: 26,
-  height: 34,
+  width: 32,
+  height: 42,
   maxSpeed: 250,
   groundAccel: 2600,
   groundDecel: 3000,

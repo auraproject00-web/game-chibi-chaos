@@ -10,6 +10,7 @@ import { FxManager } from '../managers/FxManager';
 import { InputManager } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
 import type { FakePlatform } from '../traps/FakePlatform';
+import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
 
 type PlayState = 'playing' | 'dead' | 'complete';
@@ -84,11 +85,11 @@ export class GameScene extends Phaser.Scene {
     if (this.scene.isActive('UI')) this.scene.stop('UI');
     this.scene.launch('UI');
 
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyZoom, this);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.game.events.on(Phaser.Core.Events.BLUR, this.onBlur, this);
     this.game.events.on(Phaser.Core.Events.HIDDEN, this.onBlur, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyZoom, this);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.game.events.off(Phaser.Core.Events.BLUR, this.onBlur, this);
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.onBlur, this);
       this.controls.destroy();
@@ -96,11 +97,23 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Keeps roughly VIEW_HEIGHT world px visible vertically on any screen. */
+  /**
+   * Keeps roughly VIEW_HEIGHT world px visible vertically, so in landscape the ground and
+   * traps fill the screen.
+   */
   private applyZoom(): void {
     const { width, height } = this.scale;
     const zoom = Math.min(height / VIEW_HEIGHT, width / MIN_VIEW_WIDTH);
     this.cameras.main.setZoom(zoom);
+  }
+
+  /** Rotating a phone to portrait pauses the game; an overlay asks the player to rotate back. */
+  private onResize(): void {
+    this.applyZoom();
+    const { width, height } = this.scale;
+    if (isPortraitTouch(width, height, this.sys.game.device.input.touch) && this.state === 'playing') {
+      this.pauseGame();
+    }
   }
 
   private onBlur(): void {

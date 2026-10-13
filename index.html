@@ -6,8 +6,12 @@
     <meta name="theme-color" content="#9ED8FF" />
     <meta name="description" content="CHIBI CHAOS - Cute Outside, Chaos Inside. A cute 2D troll platformer." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CHIBI CHAOS" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -39,10 +43,56 @@
         display: block;
         touch-action: none;
       }
+      /* Gameplay is landscape-only on phones: portrait shows a rotate prompt. */
+      #rotate {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        padding: 24px;
+        box-sizing: border-box;
+        background: linear-gradient(180deg, #bfe3ff 0%, #e8dcff 60%, #ffe6ef 100%);
+        color: #4a3346;
+        font: 700 22px "Fredoka", "Trebuchet MS", sans-serif;
+        text-align: center;
+      }
+      #rotate small {
+        font-weight: 500;
+        font-size: 16px;
+        opacity: 0.8;
+      }
+      #rotate .phone {
+        width: 64px;
+        height: 108px;
+        border-radius: 14px;
+        border: 6px solid #4a3346;
+        background: #b7f0c1;
+        box-sizing: border-box;
+        animation: rotate-phone 2.2s ease-in-out infinite;
+      }
+      @keyframes rotate-phone {
+        0%, 20% { transform: rotate(0deg); }
+        55%, 100% { transform: rotate(-90deg); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #rotate .phone { animation: none; transform: rotate(-90deg); }
+      }
+      @media (orientation: portrait) and (pointer: coarse) {
+        #rotate { display: flex; }
+      }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="rotate" role="alert">
+      <div class="phone" aria-hidden="true"></div>
+      <div>Putar HP ke landscape</div>
+      <small>CHIBI CHAOS dimainkan dalam mode landscape.</small>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
