@@ -50,6 +50,7 @@ public/
 
 1. Create `src/levels/levelNN.ts` exporting a `LevelData` object (see `src/levels/types.ts`; coordinates are in tiles of 32 px).
 2. Add it to `LEVELS` in `src/levels/index.ts`.
+3. Optional: `theme: 'candy'` uses the Candy Meadow look (platforms, sky, parallax, sparkles); the default is `'meadow'`.
 
 No changes to the core systems are needed.
 
@@ -59,7 +60,7 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 
 | type | What it does | How to beat it once learned |
 | --- | --- | --- |
-| `fakeFloor` | Cracked ground crumbles 350ms after you land | Keep moving / jump over |
+| `fakeFloor` | Cracked ground crumbles `delayMs` (default 350ms) after you land | Keep moving / jump over |
 | `surpriseSpikes` | Hidden spikes pop up under you, then stay visible | Jump over the spot |
 | `runningPortal` | The finish portal hops away when you get close | Follow it (it never comes back) |
 | `invisibleWall` | Unseen solid wall, shimmers into view after a bump | Jump over it |
@@ -67,13 +68,23 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 | `reverseControls` | Swirl pickup swaps left/right for 3s | Jump over the swirl |
 | `fakeCheckpoint` | Crooked-pole flag that never saves, can pop spikes | Ignore it, jump the spikes |
 | `fallingPlatform` | Wooden plank drops shortly after you stand on it | Hop off quickly |
+| `movingPlatform` | Candy wafer that shuttles between two points and pauses at each end; carries MOCHI | Learn the rhythm |
+| `fakeFinish` | Decoy portal that hops away and vanishes; the real portal is hidden until `revealX` | Keep going past the decoy |
 
 Example: `{ type: 'baitCoin', x: 32, y: 11, spikes: { x: 31, y: 14, w: 3 } }`.
 Use only a few trap types per level and introduce them one at a time. Every trap fires at the same
 spot every run; there is no randomness. Deaths are unlimited: MOCHI respawns at the last checkpoint
 and the death counter goes up.
 
-In dev (`npm run dev`), open `/?traplab` to play a test level with one of each trap.
+In dev (`npm run dev`), open `/?traplab` to play a test level with one of each trap, or `/?level=N`
+to jump straight into level N (dev only, ignores locks).
+
+## Levels
+
+1. **Hello Mochi!** (meadow): the basics and the first traps.
+2. **Trust Issues** (Candy Meadow, unlocked by finishing Level 1): an intro fake floor, a bait coin,
+   a fake checkpoint between real ones, two moving wafers around an island with hidden spikes, and a
+   finish portal that runs away and vanishes before the real one appears.
 
 ## Death reactions
 

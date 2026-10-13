@@ -8,6 +8,7 @@ import {
   type LevelCompletePayload,
   type NarratorLine,
   type TrapPassedPayload,
+  type TrapSprungPayload,
 } from './EventBus';
 
 /** The situations the narrator reacts to. */
@@ -19,6 +20,7 @@ export type CommentKind =
   | 'quickDeath'
   | 'trapType'
   | 'passedTrap'
+  | 'trapSprung'
   | 'idle';
 
 /**
@@ -32,6 +34,7 @@ export const PRIORITY: Record<CommentKind, number> = {
   sameArea: 45,
   quickDeath: 40,
   trapType: 30,
+  trapSprung: 25,
   passedTrap: 20,
   idle: 10,
 };
@@ -44,6 +47,7 @@ const FACE_OF: Record<CommentKind, keyof IntensityProfile['faces']> = {
   sameArea: 'tease',
   quickDeath: 'wow',
   trapType: 'tease',
+  trapSprung: 'tease',
   passedTrap: 'wow',
   idle: 'bored',
 };
@@ -91,6 +95,7 @@ export class TrollPersonalityManager {
   private readonly deathsByTrap = new Map<string, number>();
   private readonly deathsByArea = new Map<number, number>();
   private readonly passedCommented = new Set<string>();
+  private readonly sprungCommented = new Set<string>();
   private readonly firstTrapDeath = new Set<string>();
   private readonly recent: string[] = [];
   private readonly used = new Set<string>();
@@ -103,6 +108,7 @@ export class TrollPersonalityManager {
     EventBus.on(GameEvents.PlayerDied, this.onDeath, this);
     EventBus.on(GameEvents.PlayerRespawned, this.onRespawn, this);
     EventBus.on(GameEvents.TrapPassed, this.onTrapPassed, this);
+    EventBus.on(GameEvents.TrapSprung, this.onTrapSprung, this);
     EventBus.on(GameEvents.LevelComplete, this.onComplete, this);
   }
 
@@ -111,6 +117,7 @@ export class TrollPersonalityManager {
     EventBus.off(GameEvents.PlayerDied, this.onDeath, this);
     EventBus.off(GameEvents.PlayerRespawned, this.onRespawn, this);
     EventBus.off(GameEvents.TrapPassed, this.onTrapPassed, this);
+    EventBus.off(GameEvents.TrapSprung, this.onTrapSprung, this);
     EventBus.off(GameEvents.LevelComplete, this.onComplete, this);
   }
 
@@ -183,6 +190,18 @@ export class TrollPersonalityManager {
     if (this.say('passedTrap', 'passedTrap')) this.passedCommented.add(p.trapId);
   }
 
+  /**
+   * A trap went off without a death. Each one is commented at most once per level visit.
+   * One-time story beats (fake flag, decoy portal, real portal) skip the cooldown; a bait coin
+   * that can be grabbed again respects it.
+   */
+  private onTrapSprung(p: TrapSprungPayload): void {
+    const tag = `${p.trapId}:${p.key}`;
+    if (this.sprungCommented.has(tag)) return;
+    const once = p.key !== 'baitCoin';
+    if (this.say('trapSprung', `sprung:${p.key}`, once)) this.sprungCommented.add(tag);
+  }
+
   private onComplete(p: LevelCompletePayload): void {
     if (p.deaths > TUNING.finishAfterDeaths) this.say('finishAfterManyDeaths', 'finishAfterManyDeaths', true);
   }
@@ -228,7 +247,7 @@ export class TrollPersonalityManager {
   debugSay(kind: CommentKind): void {
     this.lastCommentAt = -Infinity;
     this.quietUntil = -Infinity;
-    this.say(kind, kind === 'trapType' ? 'trap:fakeFloor' : kind);
+    this.say(kind, kind === 'trapType' ? 'trap:fakeFloor' : kind === 'trapSprung' ? 'sprung:fakeFinish' : kind);
   }
 
   /** Dev only: forget the cooldown so the next real event can comment. */

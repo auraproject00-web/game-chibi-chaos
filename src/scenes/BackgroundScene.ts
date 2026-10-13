@@ -27,6 +27,18 @@ export class BackgroundScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
 
+  /** Swaps the backdrop art for a level theme (menus and Level 01 use 'meadow'). */
+  setTheme(theme: 'meadow' | 'candy'): void {
+    if (!this.sky) return;
+    const sfx = theme === 'candy' ? '_candy' : '';
+    if (this.sky.texture.key === `sky${sfx}`) return;
+    this.sky.setTexture(`sky${sfx}`);
+    this.far.setTexture(`hills_far${sfx}`);
+    this.near.setTexture(`hills_near${sfx}`);
+    this.clouds.setTint(theme === 'candy' ? 0xffe6f2 : 0xffffff);
+    this.layout();
+  }
+
   /** Pass a function returning the world camera's x, or null to drift on its own. */
   setScrollSource(source: (() => number) | null): void {
     this.source = source;

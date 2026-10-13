@@ -13,7 +13,9 @@ import {
   type DeathReactionPayload,
   type LevelCompletePayload,
   type TrapPassedPayload,
+  type TrapSprungPayload,
 } from '../managers/EventBus';
+import { AmbientSparkles } from '../managers/AmbientSparkles';
 import { FxManager } from '../managers/FxManager';
 import { InputManager, type ControlFrame } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
@@ -53,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   private aliveMs: number | null = null;
   /** Last trap MOCHI set off (crumbling floor, wobbling plank), to credit a fall that follows. */
   private lastTriggered: { trap: Trap; at: number } | null = null;
+  private ambient: AmbientSparkles | null = null;
   /** Game time (sum of clamped frame deltas): consistent with physics even on slow frames. */
   private gameMs = 0;
   /** Traps MOCHI was in front of during this life; passing one emits TrapPassed. */
@@ -116,7 +119,12 @@ export class GameScene extends Phaser.Scene {
         this.lastTriggered = { trap: source, at: this.gameMs };
       },
       reverseControls: (ms) => this.reverseControls(ms),
+      sprung: (source, key) => {
+        const payload: TrapSprungPayload = { trapId: source.id, trapType: source.type, key: key ?? source.type };
+        EventBus.emit(GameEvents.TrapSprung, payload);
+      },
     };
+    this.world.traps.forEach((t) => t.init?.(this.trapCtx));
     this.dizzyIcon = this.add.image(0, 0, 'swirl').setDepth(22).setScale(0.6).setVisible(false);
 
     // Camera follows smoothly with a small look-ahead in the facing direction.
@@ -132,6 +140,8 @@ export class GameScene extends Phaser.Scene {
 
     const bg = this.scene.get('Background') as BackgroundScene;
     bg.setScrollSource(() => cam.worldView.x);
+    bg.setTheme(level.theme ?? 'meadow');
+    if (level.theme === 'candy') this.ambient = new AmbientSparkles(this);
 
     // HUD on top. It reads the touch controls too.
     if (this.scene.isActive('UI')) this.scene.stop('UI');
@@ -146,7 +156,10 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.onBlur, this);
       this.controls.destroy();
       this.personality.destroy();
+      this.ambient?.destroy();
+      this.ambient = null;
       bg.setScrollSource(null);
+      bg.setTheme('meadow');
     });
   }
 

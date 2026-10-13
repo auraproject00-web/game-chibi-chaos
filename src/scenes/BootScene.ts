@@ -14,8 +14,12 @@ export class BootScene extends Phaser.Scene {
     generateTextures(this);
     void waitForFont().then(() => {
       this.scene.launch('Background');
-      if (import.meta.env.DEV && new URLSearchParams(location.search).has('traplab')) {
+      const params = new URLSearchParams(location.search);
+      if (import.meta.env.DEV && params.has('traplab')) {
         this.scene.start('Game', { levelId: 99 });
+      } else if (import.meta.env.DEV && params.has('level')) {
+        // Dev only: jump straight into a level (e.g. ?level=2), ignoring progress.
+        this.scene.start('Game', { levelId: Number(params.get('level')) || 1 });
       } else {
         this.scene.start('Menu');
       }

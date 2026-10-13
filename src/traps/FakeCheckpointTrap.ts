@@ -53,6 +53,7 @@ export class FakeCheckpointTrap implements Trap {
     });
     AudioManager.playTroll('hehe');
     ctx.fx.pop(this.sprite.x + 10, this.sprite.y - 90, 'Hehe! Palsu!');
+    ctx.sprung(this);
     if (this.spikes) {
       this.spikes.reveal();
       ctx.fx.shake(120, 0.004);

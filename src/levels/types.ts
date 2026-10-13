@@ -39,9 +39,13 @@ export interface HintDef extends PointDef {
   teach?: TutorialSkill;
 }
 
+/** Visual theme: platform style, backdrop and ambient particles. Default 'meadow'. */
+export type LevelTheme = 'meadow' | 'candy';
+
 export interface LevelData {
   id: number;
   name: string;
+  theme?: LevelTheme;
   /** Level size in tiles. */
   width: number;
   height: number;

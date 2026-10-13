@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
-import { PLATFORM_PAD, platformTexture } from '../art/textures';
+import { PLATFORM_PAD, platformTexture, setPlatformTheme } from '../art/textures';
 import { Checkpoint } from '../entities/Checkpoint';
 import { FinishPortal } from '../entities/FinishPortal';
 import { SpikeTrap } from '../traps/SpikeTrap';
@@ -26,6 +26,8 @@ export interface BuiltLevel {
 /** Turns level data into game objects. Gameplay systems never read raw level data directly. */
 export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boolean): BuiltLevel {
   const solids = scene.physics.add.staticGroup();
+  // Platforms (and fake floors) baked below use this level's look.
+  setPlatformTheme(data.theme ?? 'meadow');
 
   for (const r of data.solids) {
     const x = r.x * TILE;

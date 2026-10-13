@@ -64,6 +64,45 @@ export class FinishPortal {
     });
   }
 
+  get isHidden(): boolean {
+    return !this.portal.visible;
+  }
+
+  /** Hidden and not enterable (Fake Finish keeps the real portal secret until it is earned). */
+  hide(): void {
+    this.area.setEmpty();
+    this.portal.setVisible(false);
+    this.glow.setVisible(false);
+  }
+
+  /** Pops into view and becomes enterable. */
+  reveal(scene: Phaser.Scene): void {
+    const { x, y } = this.center;
+    this.portal.setVisible(true).setScale(0.1);
+    this.glow.setVisible(true).setAlpha(0);
+    scene.tweens.add({ targets: this.portal, scale: 1, duration: 420, ease: 'Back.easeOut' });
+    scene.tweens.add({ targets: this.glow, alpha: 0.9, duration: 420 });
+    this.area.setTo(x - 22, y - 34, 44, 80);
+  }
+
+  /** Decoy only: shrinks away for good. */
+  vanish(scene: Phaser.Scene): void {
+    this.area.setEmpty();
+    scene.tweens.killTweensOf([this.portal, this.glow]);
+    scene.tweens.add({
+      targets: [this.portal, this.glow],
+      scale: 0,
+      angle: 540,
+      alpha: 0,
+      duration: 380,
+      ease: 'Back.easeIn',
+      onComplete: () => {
+        this.portal.setVisible(false);
+        this.glow.setVisible(false);
+      },
+    });
+  }
+
   /** Little "gulp" when MOCHI enters. */
   absorb(scene: Phaser.Scene): void {
     scene.tweens.add({ targets: this.portal, scale: 1.35, duration: 200, yoyo: true, ease: 'Quad.easeOut' });

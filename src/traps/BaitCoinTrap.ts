@@ -54,6 +54,7 @@ export class BaitCoinTrap implements Trap {
     AudioManager.play('coin');
     ctx.fx.sparkle(this.coin.x, this.coin.y, 10);
     this.coin.setVisible(false);
+    ctx.sprung(this);
     this.timer = this.scene.time.delayedCall(this.cfg.delayMs ?? 240, () => {
       this.spikes.reveal();
       ctx.fx.shake(120, 0.004);

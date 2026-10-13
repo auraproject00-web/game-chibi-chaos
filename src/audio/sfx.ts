@@ -24,7 +24,8 @@ export type SfxName =
   | 'blip'
   | 'boing'
   | 'narSoft'
-  | 'narSavage';
+  | 'narSavage'
+  | 'reveal';
 
 /** The same sound is skipped if it was played less than this many ms ago. */
 export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
@@ -44,6 +45,7 @@ export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   hehe: 300,
   narSoft: 250,
   narSavage: 300,
+  reveal: 1000,
 };
 export const DEFAULT_MIN_GAP_MS = 50;
 
@@ -138,6 +140,11 @@ export function playRecipe(s: Synth, name: SfxName, t: number): number {
       s.tone('sine', 1046.5, 1046.5, t, 0.22, 0.045);
       s.tone('sine', 1568, 1568, t + 0.04, 0.2, 0.02);
       return 0.26;
+    case 'reveal':
+      // The real portal appears: rising sparkly arpeggio.
+      [783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => s.tone('triangle', f, f, t + i * 0.07, 0.18, 0.08));
+      s.tone('sine', 2093, 2093, t + 0.3, 0.35, 0.04);
+      return 0.68;
     case 'narSavage':
       // Savage: dramatic "wah-wah" with a wobbly ending.
       s.tone('triangle', 392, 370, t, 0.16, 0.1);
