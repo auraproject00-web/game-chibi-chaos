@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { PALETTE, TILE, TONES } from '../config';
 import { generateMochiTextures } from './mochi';
+import { generateIllusionTextures } from './illusionTextures';
+import type { LevelTheme } from '../levels/types';
 
 /**
  * Procedural placeholder art. Everything is drawn once at boot into textures so the
@@ -162,9 +164,70 @@ export function drawCandyPlatform(g: Phaser.GameObjects.Graphics, w: number, h: 
   }
 }
 
+/**
+ * Illusion World platform (Level 03): pastel crystal body with butter-yellow bands and a glassy
+ * mint cap. Same size and outline as the other themes; fake ones get the same small crack.
+ */
+export function drawIllusionPlatform(g: Phaser.GameObjects.Graphics, w: number, h: number, cracked = false): void {
+  const rand = seeded(Math.round(w * 23 + h * 19));
+  const r = Math.min(12, h / 2, w / 2);
+  const capH = Math.min(13, h - 4);
+
+  // Crystal body: lavender with soft butter and sky bands, and a few facets.
+  g.fillStyle(0xe6dcff, 1);
+  g.fillRoundedRect(0, 4, w, h - 4, { tl: 4, tr: 4, bl: r, br: r });
+  for (let y = capH + 7, i = 0; y < h - 10; y += 15, i++) {
+    g.fillStyle(i % 2 ? 0xd7efff : 0xfff1c4, 1);
+    g.fillRect(3, y, w - 6, 5);
+  }
+  const facets = Math.floor((w * h) / 1100);
+  for (let i = 0; i < facets; i++) {
+    const fx = 8 + rand() * (w - 16);
+    const fy = capH + 10 + rand() * Math.max(1, h - capH - 22);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillTriangle(fx, fy - 4, fx + 3, fy, fx, fy + 4);
+    g.fillTriangle(fx, fy - 4, fx - 3, fy, fx, fy + 4);
+  }
+  if (h > 28) {
+    g.fillStyle(0xcbbcf2, 1);
+    g.fillRoundedRect(0, h - 8, w, 8, { tl: 0, tr: 0, bl: r, br: r });
+  }
+  if (cracked) {
+    g.lineStyle(1.6, 0x8f78c8, 0.85);
+    const cx = w * 0.5;
+    g.strokePoints(
+      [
+        { x: cx - 6, y: capH + 2 },
+        { x: cx - 2, y: capH + 7 },
+        { x: cx - 5, y: capH + 11 },
+        { x: cx, y: Math.min(h - 3, capH + 16) },
+      ],
+      false,
+    );
+  }
+  g.lineStyle(2, 0xa58fdc, 1);
+  g.strokeRoundedRect(0, 4, w, h - 4, { tl: 4, tr: 4, bl: r, br: r });
+
+  // Glassy mint cap with a shine line.
+  g.fillStyle(0xbdf3d0, 1);
+  g.fillRoundedRect(-2, 0, w + 4, capH, Math.min(7, capH / 2));
+  for (let x = 6; x < w; x += 12) g.fillCircle(x, capH - 1, 4.5);
+  g.fillStyle(0xeafff1, 1);
+  g.fillRoundedRect(3, 2.5, w - 6, 3.5, 1.8);
+  g.lineStyle(2, 0x6fc79a, 1);
+  g.strokeRoundedRect(-2, 0, w + 4, capH, Math.min(7, capH / 2));
+  // Tiny pastel glints on the cap.
+  const colors = [PALETTE.pink, PALETTE.lavender, 0xfff1a8, PALETTE.sky];
+  const n = Math.floor(w / 20);
+  for (let i = 0; i < n; i++) {
+    g.fillStyle(colors[Math.floor(rand() * colors.length)], 1);
+    g.fillCircle(6 + rand() * (w - 12), 5 + rand() * (capH - 9), 1.6);
+  }
+}
+
 /** Visual theme used for platforms baked from now on (set by LevelBuilder per level). */
-let platformTheme: 'meadow' | 'candy' = 'meadow';
-export function setPlatformTheme(theme: 'meadow' | 'candy'): void {
+let platformTheme: LevelTheme = 'meadow';
+export function setPlatformTheme(theme: LevelTheme): void {
   platformTheme = theme;
 }
 
@@ -177,11 +240,12 @@ export const PLATFORM_PAD = { x: 2, y: 3 } as const;
  */
 export function platformTexture(scene: Phaser.Scene, w: number, h: number, cracked = false): string {
   const theme = platformTheme;
-  const key = `platform_${theme === 'candy' ? 'candy_' : ''}${w}x${h}${cracked ? '_cracked' : ''}`;
+  const key = `platform_${theme === 'meadow' ? '' : `${theme}_`}${w}x${h}${cracked ? '_cracked' : ''}`;
   if (!scene.textures.exists(key)) {
     make(scene, key, w + PLATFORM_PAD.x * 2, h + PLATFORM_PAD.y, (g) => {
       g.translateCanvas(PLATFORM_PAD.x, PLATFORM_PAD.y);
       if (theme === 'candy') drawCandyPlatform(g, w, h, cracked);
+      else if (theme === 'illusion') drawIllusionPlatform(g, w, h, cracked);
       else drawPlatform(g, w, h, cracked);
     });
   }
@@ -573,6 +637,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   generateBackgroundTextures(scene);
+  generateIllusionTextures(scene);
 }
 
 function generateBackgroundTextures(scene: Phaser.Scene): void {

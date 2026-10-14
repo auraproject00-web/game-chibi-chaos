@@ -39,6 +39,12 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:realFinish': ['Ini portal yang asli. Ayo, sedikit lagi!'],
     'trap:decoyPortal': ['Portalnya nakal ya. Coba perhatikan putarannya~'],
     'sprung:decoyPortal': ['Hehe, itu portal bohongan~', 'Ups, portal yang itu cuma pura-pura~'],
+    'trap:mirrorPlatform': ['Yang berkilau-kilau itu cuma bayangan~', 'Platform asli diam, yang palsu goyang-goyang~'],
+    'trap:ghostMochi': ['Bayanganmu bisa bantu, lho. Tunggu dia~', 'Coba diam sebentar di tombolnya~'],
+    'trap:realityShift': ['Lihat lampunya dulu, baru lompat~', 'Yang mau hilang berkedip dulu, kok~'],
+    'trap:lieDoor': ['Pintunya nakal ya. Ingat yang berkilau itu bohong~'],
+    'sprung:lieDoor': ['Hehe, pintunya bawa kamu balik. Gapapa~'],
+    'sprung:trueDoor': ['Pintu ini beneran terbuka. Ayo masuk~'],
   },
   chaos: {
     finishAfterManyDeaths: ['AKHIRNYA! GUA UDAH MAU PENSIUN!', 'Selamat… gua sampe ketiduran nunggunya.'],
@@ -61,6 +67,12 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:realFinish': ['Oke oke… yang ini ASLI. Sumpah.'],
     'trap:decoyPortal': ['Portal KW kok dipercaya?', 'Portalnya cuma cosplay, bro.'],
     'sprung:decoyPortal': ['Portalnya cuma cosplay, bro.', 'Itu portal KW, hehe.'],
+    'trap:mirrorPlatform': ['YANG ASLI YANG MANA NIH?', 'Itu bayangan, bukan lantai.'],
+    'trap:ghostMochi': ['ITU BAYANGAN LU LEBIH JAGO!', 'Bayangannya sabar, lu nggak.'],
+    'trap:realityShift': ['GAME-NYA NGGAK BOHONG KOK… MUNGKIN.', 'Lantainya lagi pindah dimensi, bro.'],
+    'trap:lieDoor': ['WKWKWK KETIPU LAGI!', 'Pintunya cuma pajangan, hehe.'],
+    'sprung:lieDoor': ['WKWKWK KETIPU LAGI!', 'Selamat datang kembali, hehe.'],
+    'sprung:trueDoor': ['FINISH BENERAN? COBA AJA!'],
   },
   savage: {
     finishAfterManyDeaths: ['AKHIRNYA! Gua udah nulis surat wasiat tadi.', 'Selamat! Portalnya sampe tepuk tangan sambil nangis.'],
@@ -83,6 +95,12 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'sprung:realFinish': ['Yang ini asli. Mungkin. Hehe.'],
     'trap:decoyPortal': ['Portal KW, harapan juga KW.', 'Ditipu portal. Lagi.'],
     'sprung:decoyPortal': ['Lu kira itu finish? Gemes.', 'Portal KW detected.'],
+    'trap:mirrorPlatform': ['Nginjek bayangan. Inovatif.', 'Lantainya HD, sayang cuma ilusi.'],
+    'trap:ghostMochi': ['Bayangannya resign jadi partner lu.', 'Hantunya aja lebih sabar.'],
+    'trap:realityShift': ['Realitas: 1. Mochi: 0.', 'Lantainya pindah dimensi tanpa pamit.'],
+    'trap:lieDoor': ['Pintunya ketawa paling kenceng.', 'Masuk pintu palsu dengan percaya diri.'],
+    'sprung:lieDoor': ['Balik lagi ke belakang. Nikmatin aja.', 'Pintunya ngusir lu, hehe.'],
+    'sprung:trueDoor': ['Finish beneran? Gua juga kaget.'],
   },
 };
 

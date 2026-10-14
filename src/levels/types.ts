@@ -41,7 +41,18 @@ export interface HintDef extends PointDef {
 }
 
 /** Visual theme: platform style, backdrop and ambient particles. Default 'meadow'. */
-export type LevelTheme = 'meadow' | 'candy';
+export type LevelTheme = 'meadow' | 'candy' | 'illusion';
+
+/**
+ * Scenery with no collision (Level 03's lying signs and its truth tells). `y` is the ground row.
+ *  - `sign`: a tutorial-style board. Its text may lie; it never changes the level.
+ *  - `sprouts`: mint sprouts over `w` tiles. They only grow on ground that is really there.
+ *  - `holes`: tiny holes over `w` tiles, above spikes that sleep in the ground.
+ */
+export type DecorDef =
+  | { kind: 'sign'; x: number; y: number; text: string }
+  | { kind: 'sprouts'; x: number; y: number; w: number }
+  | { kind: 'holes'; x: number; y: number; w: number };
 
 export interface LevelData {
   id: number;
@@ -61,6 +72,7 @@ export interface LevelData {
   checkpoints?: PointDef[];
   finish: PointDef;
   hints?: HintDef[];
+  decor?: DecorDef[];
   /** Narrator lines only this level uses (per intensity and key), tried before the shared ones. */
   trollLines?: LevelLines;
 }

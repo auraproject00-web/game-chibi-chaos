@@ -20,7 +20,12 @@ export type TrapConfig =
   | FallingPlatformConfig
   | MovingPlatformConfig
   | FakeFinishConfig
-  | DecoyPortalConfig;
+  | DecoyPortalConfig
+  | MirrorPlatformConfig
+  | MirrorPanelConfig
+  | GhostMochiConfig
+  | RealityShiftConfig
+  | LieDoorConfig;
 
 export type TrapType = TrapConfig['type'];
 
@@ -159,6 +164,89 @@ export interface DecoyPortalConfig {
   spikes?: { x: number; y?: number; w: number; delayMs?: number; warnMs?: number };
   /** Cracked ground under the decoy, top at row `y`. It wobbles `delayMs` (default 250) and falls. */
   floor?: { x: number; w: number; h?: number; delayMs?: number };
+}
+
+/**
+ * 12. Illusion platform (Mirror Maze). Looks like the level's ground but has no collision. Tell:
+ * it always shimmers (soft alpha pulse and a light waver) while real ground stays perfectly still.
+ * It shatters into sparkles when MOCHI passes through it, and is back on respawn.
+ */
+export interface MirrorPlatformConfig {
+  type: 'mirrorPlatform';
+  x: number;
+  /** Row of its top surface. */
+  y: number;
+  w: number;
+  /** Height in tiles. Default 1. */
+  h?: number;
+}
+
+/** 13. A tall mirror (scenery). MOCHI's reflection shows in it while MOCHI walks past. */
+export interface MirrorPanelConfig {
+  type: 'mirrorPanel';
+  /** Center tile and the ground row it stands on. */
+  x: number;
+  y: number;
+}
+
+/**
+ * 14. Ghost Mochi. While MOCHI is between `fromX` and `toX`, a ghost replays MOCHI's own moves
+ * exactly `delayMs` later. Plates are pressed by MOCHI or the ghost. A gate is open (and a
+ * bridge solid) while its plate is pressed. The ghost never hurts and has no collision; it is
+ * a recording of the sprite, so it never touches the real player controller. Cleared on respawn.
+ */
+export interface GhostMochiConfig {
+  type: 'ghostMochi';
+  fromX: number;
+  toX: number;
+  delayMs: number;
+  /** Crystal at the start of the zone (ground row). */
+  shrine: { x: number; y: number };
+  plates: { x: number; y: number; w: number }[];
+  /** A light gate standing on row `y`, `h` tiles tall, opened by plate index `plate`. */
+  gates: { x: number; y: number; h: number; plate: number }[];
+  /** A crystal bridge with its top at row `y`, solid while plate index `plate` is pressed. */
+  bridges: { x: number; y: number; w: number; plate: number }[];
+  /** A gate or bridge about to close blinks this long before. */
+  warnMs: number;
+}
+
+/**
+ * 15. Reality Shift. Crystal platforms in two phases (0 = mint, 1 = pink) turn SOLID or PHANTOM
+ * on one fixed cycle. Phase 0 is solid for `solidMs` from the start of each `periodMs`; phase 1
+ * the same, half a period later (so both are solid for a moment at each change). A platform
+ * about to vanish blinks for `warnMs`; one about to appear fills in. The clock restarts on
+ * respawn, so every try plays the same. A platform never turns solid inside MOCHI.
+ */
+export interface RealityShiftConfig {
+  type: 'realityShift';
+  /** Sounds play only while MOCHI is in this range (tiles). */
+  fromX: number;
+  toX: number;
+  periodMs: number;
+  solidMs: number;
+  warnMs: number;
+  platforms: { x: number; y: number; w: number; phase: 0 | 1 }[];
+  /** Phase lamps in the safe area, to read the rhythm before going. */
+  lamps?: { x: number; y: number };
+}
+
+/**
+ * 16. The Final Lie: a door. `trap` stands on an illusion floor (it shimmers) that drops MOCHI.
+ * `warp` sends MOCHI back to `warpTo` (no death). `true` hides the level's real finish portal
+ * and opens when MOCHI comes close. Labels may lie; the doors always behave the same.
+ */
+export interface LieDoorConfig {
+  type: 'lieDoor';
+  /** Door center tile and the row it stands on. */
+  x: number;
+  y: number;
+  kind: 'trap' | 'warp' | 'true';
+  label: string;
+  /** `trap`: the illusion floor under the door (left tile and width). */
+  floor?: { x: number; w: number };
+  /** `warp`: where MOCHI lands (ground row). */
+  warpTo?: { x: number; y: number };
 }
 
 /** What a trap may touch in the running game. */

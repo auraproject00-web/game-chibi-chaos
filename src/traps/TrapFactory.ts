@@ -4,6 +4,11 @@ import { FakeCheckpointTrap } from './FakeCheckpointTrap';
 import { FakeFinishTrap } from './FakeFinishTrap';
 import { FakeFloorTrap } from './FakeFloorTrap';
 import { FallingPlatformTrap } from './FallingPlatformTrap';
+import { GhostMochiTrap } from './GhostMochiTrap';
+import { LieDoorTrap } from './LieDoorTrap';
+import { MirrorPanelTrap } from './MirrorPanelTrap';
+import { MirrorPlatformTrap } from './MirrorPlatformTrap';
+import { RealityShiftTrap } from './RealityShiftTrap';
 import { InvisibleWallTrap } from './InvisibleWallTrap';
 import { MovingPlatformTrap } from './MovingPlatformTrap';
 import { ReverseControlsTrap } from './ReverseControlsTrap';
@@ -42,5 +47,15 @@ function build(scene: Phaser.Scene, cfg: TrapConfig): Trap {
       return new FakeFinishTrap(scene, cfg);
     case 'decoyPortal':
       return new DecoyPortalTrap(scene, cfg);
+    case 'mirrorPlatform':
+      return new MirrorPlatformTrap(scene, cfg);
+    case 'mirrorPanel':
+      return new MirrorPanelTrap(scene, cfg);
+    case 'ghostMochi':
+      return new GhostMochiTrap(scene, cfg);
+    case 'realityShift':
+      return new RealityShiftTrap(scene, cfg);
+    case 'lieDoor':
+      return new LieDoorTrap(scene, cfg);
   }
 }
