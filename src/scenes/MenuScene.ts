@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PALETTE, TONES } from '../config';
-import { MOCHI_FOOT_Y, MOCHI_TEX_H, mochiKey } from '../art/mochi';
+import { MOCHI_FOOT_Y, MOCHI_RES, MOCHI_TEX_H, mochiKey } from '../art/mochi';
 import { drawPlatform } from '../art/textures';
 import { LEVELS } from '../levels';
 import { AudioManager } from '../managers/AudioManager';
@@ -50,7 +50,7 @@ export class MenuScene extends Phaser.Scene {
     const mochi = this.add
       .image(mochiX, groundY + 2, mochiKey('idle'))
       .setOrigin(0.5, MOCHI_FOOT_Y / MOCHI_TEX_H)
-      .setScale(1.6 * s);
+      .setScale((1.6 * s) / MOCHI_RES);
     this.tweens.add({
       targets: mochi,
       y: groundY - 40 * s,

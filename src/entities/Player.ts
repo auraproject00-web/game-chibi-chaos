@@ -1,18 +1,27 @@
 import Phaser from 'phaser';
 import { PLAYER } from '../config';
-import { MOCHI_FOOT_Y, MOCHI_TEX_H, RUN_CYCLE, mochiKey, type MochiFrame } from '../art/mochi';
+import { MOCHI_FOOT_Y, MOCHI_RES, MOCHI_TEX_H, RUN_CYCLE, WALK_CYCLE, mochiKey, type MochiFrame } from '../art/mochi';
 import type { ControlFrame } from '../managers/InputManager';
 import type { FxManager } from '../managers/FxManager';
 import { AudioManager } from '../managers/AudioManager';
 
-/** Visual scale of the 64px MOCHI texture (about 25% larger than the first prototype). */
-const BASE_SCALE = 0.98;
+/** Visual scale of the MOCHI texture: same on-screen size as before, drawn at MOCHI_RES x for sharpness. */
+const BASE_SCALE = 0.98 / MOCHI_RES;
 
 /** Jelly spring for squash & stretch: stiff enough to snap back, soft enough to wobble. */
 const JELLY_STIFFNESS = 340;
 const JELLY_DAMPING = 13;
 /** Falling faster than this (px/s) switches MOCHI to the panic face. */
 const PANIC_FALL_SPEED = 420;
+/** Below this ground speed (px/s) MOCHI waddles (walk cycle); above it, the run cycle. */
+const RUN_SPEED = 160;
+/** How long the take-off "ready" face and the landing squish face show (ms). Visual only. */
+const PREP_FACE_MS = 90;
+const LAND_FACE_MS = 110;
+/** Happy pop face right after respawning (ms). */
+const RESPAWN_FACE_MS = 450;
+/** Death tint: MOCHI goes a little grey as it poofs away. */
+const DEAD_TINT = 0xd5dcd9;
 
 /**
  * MOCHI. Physics lives on an invisible zone (stable hitbox); the visible sprite follows it
@@ -46,6 +55,9 @@ export class Player {
   private mood: MochiFrame | null = null;
   private moodMs = 0;
   private jumpStartY = 0;
+  private prepMs = 0;
+  private landMs = 0;
+  private runDustStep = 0;
   /** Simple stats the tutorial reads; they never feed back into movement. */
   jumpCount = 0;
   bestRise = 0;
@@ -181,6 +193,8 @@ export class Player {
 
   private onJump(): void {
     this.kick(0.72, 1.32);
+    this.prepMs = PREP_FACE_MS;
+    this.landMs = 0;
     this.jumpCount += 1;
     this.jumpStartY = this.body.bottom;
     this.fx.dust(this.body.center.x, this.footY, 5);
@@ -191,6 +205,7 @@ export class Player {
     const impact = Phaser.Math.Clamp(this.peakFallSpeed / PLAYER.maxFall, 0.25, 1);
     this.kick(1 + 0.38 * impact, 1 - 0.32 * impact);
     if (this.peakFallSpeed > 250) {
+      this.landMs = LAND_FACE_MS;
       this.fx.dust(this.body.center.x, this.footY, Math.round(4 + 6 * impact));
       AudioManager.play('land');
     }
@@ -236,7 +251,8 @@ export class Player {
     } else if (!grounded) {
       this.idleTime = 0;
       if (vy < 0) {
-        frame = 'jump';
+        // Take-off: a short "ready" face, then the excited jump face.
+        frame = this.prepMs > 0 ? 'prep' : 'jump';
         // Stretch a little while rising fast.
         shapeY = 1 + Math.min(0.08, -vy / 8000);
       } else if (vy > PANIC_FALL_SPEED) {
@@ -245,15 +261,33 @@ export class Player {
       } else {
         frame = 'fall';
       }
-    } else if (Math.abs(body.velocity.x) > 25) {
-      // Quick little steps: four-frame cycle driven by distance, plus a springy hop.
-      const step = Math.floor(this.runDistance / 13);
-      frame = RUN_CYCLE[step % RUN_CYCLE.length];
-      const phase = Math.abs(Math.sin(this.runDistance / 8.3));
-      bob = phase * 3.5;
-      shapeY = 0.95 + phase * 0.08;
-      shapeX = 1.04 - phase * 0.06;
+    } else if (this.landMs > 0) {
+      frame = 'land';
       this.idleTime = 0;
+    } else if (Math.abs(body.velocity.x) > 25) {
+      this.idleTime = 0;
+      if (Math.abs(body.velocity.x) < RUN_SPEED) {
+        // Walk: slower two-step waddle with a gentle bob.
+        const step = Math.floor(this.runDistance / 16);
+        frame = WALK_CYCLE[step % WALK_CYCLE.length];
+        const phase = Math.abs(Math.sin(this.runDistance / 10.2));
+        bob = phase * 2;
+        shapeY = 0.97 + phase * 0.05;
+        shapeX = 1.02 - phase * 0.04;
+      } else {
+        // Run: quick four-frame cycle driven by distance, springy hop and a puff of dust now and then.
+        const step = Math.floor(this.runDistance / 13);
+        frame = RUN_CYCLE[step % RUN_CYCLE.length];
+        const phase = Math.abs(Math.sin(this.runDistance / 8.3));
+        bob = phase * 3.5;
+        shapeY = 0.95 + phase * 0.08;
+        shapeX = 1.04 - phase * 0.06;
+        const dustStep = Math.floor(this.runDistance / 96);
+        if (dustStep !== this.runDustStep) {
+          this.runDustStep = dustStep;
+          this.fx.dust(body.center.x - this.facing * 12, this.footY, 1);
+        }
+      }
     } else {
       // Idle: soft jelly breathing, wider when low and taller when high.
       this.idleTime += deltaMs;
@@ -268,6 +302,10 @@ export class Player {
       shapeY = 1 + breathe;
       shapeX = 1 - breathe * 0.8;
     }
+
+    // Counted down after use, so even at a low frame rate each face shows for at least one frame.
+    if (this.prepMs > 0) this.prepMs -= deltaMs;
+    if (this.landMs > 0) this.landMs -= deltaMs;
 
     const sx = BASE_SCALE * this.popScale * this.squashX * shapeX;
     const sy = BASE_SCALE * this.popScale * this.squashY * shapeY * this.flipScale;
@@ -297,7 +335,7 @@ export class Player {
     const dir = this.facing;
     this.mood = null;
     this.moodMs = 0;
-    this.sprite.setTexture(mochiKey(face)).setRotation(0);
+    this.sprite.setTexture(mochiKey(face)).setRotation(0).setTint(DEAD_TINT);
     this.sprite.setScale(BASE_SCALE * 1.35, BASE_SCALE * 0.6);
     this.fx.burst(x, y - 22, 14);
     this.fx.puff(x, y - 22);
@@ -337,7 +375,12 @@ export class Player {
     this.peakFallSpeed = 0;
     this.facing = 1;
     this.kick(1, 1);
-    this.sprite.setAlpha(1).setAngle(0).setPosition(x, bottomY).setTexture(mochiKey('idle'));
+    this.sprite.setAlpha(1).setAngle(0).setPosition(x, bottomY).setTexture(mochiKey('happy')).clearTint();
+    this.prepMs = 0;
+    this.landMs = 0;
+    // Happy pop face first; a death-milestone reaction set right after replaces it.
+    this.mood = 'happy';
+    this.moodMs = RESPAWN_FACE_MS;
     // Pop in: grow from nothing with an overshoot, then a jelly wobble.
     this.popScale = 0;
     this.scene.tweens.add({
