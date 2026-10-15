@@ -36,22 +36,31 @@ const failed = new Set<string>();
  * the single-file prototype) the game keeps every placeholder.
  */
 export async function readPremiumPack(timeoutMs = 1500): Promise<void> {
-  const known = new Set(manifest.assets.map((a) => premiumKey(a.id)));
+  // A single-file build can embed the pack (images as data URLs) instead of serving the folder.
+  const embedded = (window as { __CANDY_MEADOW_PACK__?: unknown }).__CANDY_MEADOW_PACK__;
+  if (embedded) {
+    usePack(embedded);
+    return;
+  }
   try {
     const ctrl = new AbortController();
     const timer = window.setTimeout(() => ctrl.abort(), timeoutMs);
     const res = await fetch(PACK_URL, { signal: ctrl.signal, cache: 'no-cache' });
     window.clearTimeout(timer);
     if (!res.ok) return;
-    const data = (await res.json()) as { candyMeadow?: { files?: unknown } };
-    const files = data?.candyMeadow?.files;
-    if (!Array.isArray(files)) return;
-    packFiles = files.filter(
-      (f): f is PackFile => !!f && typeof f.key === 'string' && typeof f.url === 'string' && known.has(f.key),
-    );
+    usePack(await res.json());
   } catch {
     packFiles = [];
   }
+}
+
+/** Keeps the pack entries that name a manifest asset; anything malformed is ignored. */
+function usePack(data: unknown): void {
+  const known = new Set(manifest.assets.map((a) => premiumKey(a.id)));
+  const files = (data as { candyMeadow?: { files?: unknown } } | null)?.candyMeadow?.files;
+  packFiles = Array.isArray(files)
+    ? files.filter((f): f is PackFile => !!f && typeof f.key === 'string' && typeof f.url === 'string' && known.has(f.key))
+    : [];
 }
 
 /** Queues the pack's images on a scene's loader (call from preload). Already loaded keys are skipped. */
