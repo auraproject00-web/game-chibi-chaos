@@ -74,7 +74,8 @@ function drawCrack(scene: Phaser.Scene, ctx: CanvasRenderingContext2D, w: number
     const s = res / PREMIUM_RES;
     const dw = img.width * s;
     const dh = img.height * s;
-    ctx.drawImage(img, (w * res - dw) / 2, surface - dh / 2, dw, dh);
+    // Top of the crack image on the surface, so nothing pokes above the platform.
+    ctx.drawImage(img, (w * res - dw) / 2, surface, dw, dh);
     return;
   }
   // No crack art installed: a thin hairline so the trap keeps its fair, subtle tell.

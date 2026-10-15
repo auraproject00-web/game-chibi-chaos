@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PREMIUM_RES, type ParallaxLayer } from '../art/premium/premiumAssets';
+import { LAYER_INSET, PREMIUM_RES, layerBottomPad, type ParallaxLayer } from '../art/premium/premiumAssets';
 import type { BackgroundScene } from './BackgroundScene';
 
 /**
@@ -42,9 +42,10 @@ export class ForegroundScene extends Phaser.Scene {
     const th = this.textures.getFrame(this.key).height;
     this.strip
       .setScale(s)
-      .setSize(Math.ceil(w / s) + 2, th)
-      .setPosition(0, h - this.layer.offset * k)
+      .setSize(Math.ceil(w / s) + 2, th - LAYER_INSET * 2)
+      .setPosition(0, h - this.layer.offset * k + (layerBottomPad(this.layer) - LAYER_INSET) * s)
       .setAlpha(this.layer.alpha ?? 1);
+    this.strip.tilePositionY = LAYER_INSET;
   }
 
   update(): void {

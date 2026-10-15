@@ -1,6 +1,6 @@
 # Level 01 Candy Meadow: persiapan aset premium
 
-Status: **sistemnya sudah siap, tapi aset premiumnya belum ada.** Level 01 masih memakai art placeholder prosedural (bentuk geometris). Setiap file premium yang belum dipasang otomatis tetap memakai placeholder-nya, jadi aset bisa dipasang sedikit demi sedikit.
+Status: **Asset Pack V1 (25 PNG) terpasang di Level 01** (lihat bagian 8). Setiap file yang gagal dimuat otomatis kembali ke placeholder prosedural.
 
 Concept sheet tidak dipakai sebagai gambar di dalam game. Gambar dari internet juga tidak dipakai.
 
@@ -133,3 +133,22 @@ Semua props wajib transparan. Ukuran props boleh sedikit berbeda, karena game me
 - Tileset baru punya satu variasi per jenis (ground dan ledge). Variasi acak per tile bisa ditambah nanti jika aset menyediakannya.
 - Level 01 tidak punya moving platform atau collapsing platform, jadi aset untuk itu tidak ada di daftar ini.
 - Resolusi render di iPhone (lihat bagian 1) membatasi ketajaman aset premium di HP.
+
+## 8. Asset Pack V1: hasil pemeriksaan dan perbaikan (2026-10-15)
+
+Sumber: `CHIBI_CHAOS_Candy_Meadow_Asset_Pack_V1.zip` (salinan asli disimpan di project files, `level01-candy/asset-pack-v1-original/`). Ke-25 nama file dan ukurannya cocok dengan manifest, dan `npm run assets:pack -- --strict` lulus.
+
+| File | Masalah | Perbaikan |
+| --- | --- | --- |
+| `tiles/tiles_ground.png`, `tiles/tiles_ledge.png` | Area 32 px di atas garis permukaan (y < 32) terisi krim solid. Akibatnya platform tampak 16 px lebih tinggi dari collision dan Mochi terlihat tenggelam di frosting. | Baris 0–31 dibuat transparan di file terpasang. Sekarang permukaan art sama dengan permukaan collision. |
+| `hazards/hz_spike.png` | Duri pink pucat di atas frosting krim/pink sulit terlihat. Hazard harus mudah dibaca. | Warna duri digelapkan menjadi merah ceri (highlight putih tetap). |
+| `bg/bg_castle.png`, `bg/bg_mountains.png` | Ujung kiri dan kanan strip tidak nyambung, jadi ada patahan bentuk tiap 2048 px. | Tidak mengubah file. Di game, layer diulang sebagai gambar + cerminnya (`mirror: true` di `CANDY_MEADOW_PARALLAX`), jadi sambungannya selalu mulus. Matikan opsi ini jika artist mengirim strip yang benar-benar seamless. |
+| Semua strip background | Baris bawah yang opaque ikut terbawa ke tepi atas layer (garis tipis 1 px) karena TileSprite mengulang vertikal. | Di kode: strip disalin dengan padding transparen dan baris tepinya tidak ditampilkan. |
+| `tiles/tiles_crack.png` | Saat ditaruh di tengah garis permukaan, separuh retakan menonjol di atas platform. | Di kode: bagian atas retakan sekarang tepat di permukaan. |
+
+Posisi layer disetel untuk V1 di `CANDY_MEADOW_PARALLAX`: castle 196, mountains 150, trees 118 (unit desain dari bawah layar).
+
+Catatan kualitas V1 (bukan error):
+- Semua gambar bertepi keras (tanpa piksel semi-transparan), jadi tepinya sedikit bergerigi saat diperkecil.
+- Strip `bg_trees` nyambung dengan baik, `bg_clouds` dan `fg_flowers` mulus.
+- Ledge wafer berwarna mirip dengan pohon di belakangnya, jadi kontrasnya cukup tapi tidak kuat.

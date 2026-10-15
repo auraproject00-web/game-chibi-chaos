@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { LevelTheme } from '../levels/types';
 import { ensureSweetTextures } from '../art/sweetTextures';
-import { CANDY_MEADOW_PARALLAX, PREMIUM_RES, hasPremium, premiumKey, type ParallaxLayer } from '../art/premium/premiumAssets';
+import { CANDY_MEADOW_PARALLAX, PREMIUM_RES, LAYER_INSET, hasLayer, hasPremium, layerBottomPad, layerTexture, premiumKey, type ParallaxLayer } from '../art/premium/premiumAssets';
 import type { ForegroundScene } from './ForegroundScene';
 
 const CLOUD_TINT: Record<LevelTheme, number> = { meadow: 0xffffff, candy: 0xffe6f2, illusion: 0xf3ecff, dimension: 0xffeef8, sweet: 0xffffff };
@@ -88,9 +88,9 @@ export class BackgroundScene extends Phaser.Scene {
     this.premium.clear();
     // Level 01 premium layers, one by one; anything not installed keeps its placeholder.
     const pick = (t: Phaser.GameObjects.TileSprite | null, layer: ParallaxLayer, fallback: () => void): void => {
-      if (theme === 'sweet' && hasPremium(this, layer.id)) {
+      if (theme === 'sweet' && hasLayer(this, layer)) {
         if (t) {
-          tex(t, premiumKey(layer.id));
+          tex(t, layerTexture(this, layer));
           this.premium.set(t, layer);
         }
       } else {
@@ -105,17 +105,17 @@ export class BackgroundScene extends Phaser.Scene {
     pick(this.clouds, P.clouds, () => tex(this.clouds, has(`clouds${sfx}`) ? `clouds${sfx}` : 'clouds'));
     this.clouds.setTint(CLOUD_TINT[theme]);
     const midKey = `hills_mid${sfx}`;
-    this.mid.setVisible(has(midKey) || (theme === 'sweet' && hasPremium(this, P.mid.id)));
+    this.mid.setVisible(has(midKey) || (theme === 'sweet' && hasLayer(this, P.mid)));
     // A hidden mid layer goes back to a stock texture so no level keeps another level's art.
     pick(this.mid, P.mid, () => tex(this.mid, has(midKey) ? midKey : 'hills_far'));
     this.look = LAYOUTS[theme] ?? DEFAULT_LAYOUT;
     this.layout();
 
     // Layer 5 (in front of the gameplay) only exists as premium art.
-    const fgOn = theme === 'sweet' && hasPremium(this, P.foreground.id);
+    const fgOn = theme === 'sweet' && hasLayer(this, P.foreground);
     if (fgOn && !this.scene.isActive('Foreground')) this.scene.launch('Foreground');
     const fg = this.scene.get('Foreground') as ForegroundScene | null;
-    if (fgOn) fg?.setLayer(premiumKey(P.foreground.id), P.foreground);
+    if (fgOn) fg?.setLayer(layerTexture(this, P.foreground), P.foreground);
     else if (this.scene.isActive('Foreground')) this.scene.stop('Foreground');
   }
 
@@ -150,9 +150,13 @@ export class BackgroundScene extends Phaser.Scene {
       const s = k / r;
       // Each layer is as tall as its texture (160/220/180 for the original art).
       const th = this.textures.getFrame(this.keys.get(t) ?? '__DEFAULT').height;
-      t.setScale(s).setSize(Math.ceil(w / s) + 2, th);
+      // Padded premium strips skip their outer rows (no wrap-around line at the edges).
+      const inset = p ? LAYER_INSET : 0;
+      t.setScale(s).setSize(Math.ceil(w / s) + 2, th - inset * 2);
+      t.tilePositionY = inset;
       if (!p) t.setPosition(0, y).setAlpha(t === this.clouds ? 0.95 : 1);
-      else t.setPosition(0, p.anchor === 'top' ? h * p.offset : h - p.offset * k).setAlpha(p.alpha ?? 1);
+      // Prepared strips carry extra rows below their art; shift down so the art stays put.
+      else t.setPosition(0, p.anchor === 'top' ? h * p.offset : h - p.offset * k + (layerBottomPad(p) - inset) * s).setAlpha(p.alpha ?? 1);
     }
   }
 

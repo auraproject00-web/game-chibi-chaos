@@ -108,6 +108,63 @@ export interface ParallaxLayer {
   /** Extra slow scroll per ms (clouds only). */
   drift?: number;
   alpha?: number;
+  /**
+   * The strip's left and right edges do not match: repeat it as image + mirrored image, which
+   * always joins cleanly. Turn off once the art itself is seamless.
+   */
+  mirror?: boolean;
+}
+
+/** Rows of padding added above and below each backdrop strip (texture px). */
+const LAYER_PAD = 4;
+/** Texture rows hidden at the top and bottom of a padded strip, so filtering never wraps around. */
+export const LAYER_INSET = 2;
+/** Backdrop strips already prepared this session (their source image is freed afterwards). */
+const preparedLayers = new Map<string, { key: string; bottomPad: number }>();
+
+/** Texture px added below a prepared strip's own bottom edge (layout keeps the art where it was). */
+export function layerBottomPad(layer: ParallaxLayer): number {
+  return preparedLayers.get(layer.id)?.bottomPad ?? 0;
+}
+
+/** True when a backdrop layer's premium image is installed (or already prepared). */
+export function hasLayer(scene: Phaser.Scene, layer: ParallaxLayer): boolean {
+  return preparedLayers.has(layer.id) || hasPremium(scene, layer.id);
+}
+
+/**
+ * Texture for a premium backdrop strip. Tile sprites wrap vertically too, so an opaque bottom row
+ * would bleed in as a thin line along the strip's top edge: the strip is copied with transparent
+ * rows above and its bottom row repeated below, and the layer shows only the inner rows
+ * (see LAYER_INSET). Strips whose edges do not match are laid out as
+ * image + mirror copy, which always joins cleanly. Built once; the original image is then freed.
+ */
+export function layerTexture(scene: Phaser.Scene, layer: ParallaxLayer): string {
+  const ready = preparedLayers.get(layer.id);
+  if (ready && scene.textures.exists(ready.key)) return ready.key;
+  const key = premiumKey(layer.id);
+  const out = `${key}_layer`;
+  const img = scene.textures.get(key).getSourceImage() as CanvasImageSource & { width: number; height: number };
+  const { width: w, height: h } = img;
+  const copies = layer.mirror ? 2 : 1;
+  const bottomPad = LAYER_PAD;
+  const ct = scene.textures.createCanvas(out, w * copies, h + LAYER_PAD + bottomPad);
+  if (!ct) return key;
+  const ctx = ct.getContext();
+  for (let i = 0; i < copies; i++) {
+    ctx.save();
+    if (i === 1) {
+      ctx.translate(w * 2, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, 0, LAYER_PAD);
+    ctx.drawImage(img, 0, h - 1, w, 1, 0, h + LAYER_PAD, w, bottomPad);
+    ctx.restore();
+  }
+  ct.refresh();
+  preparedLayers.set(layer.id, { key: out, bottomPad });
+  scene.textures.remove(key);
+  return out;
 }
 
 /**
@@ -117,8 +174,9 @@ export interface ParallaxLayer {
 export const CANDY_MEADOW_PARALLAX = {
   sky: { id: 'bg_sky', factor: 0, anchor: 'top', offset: 0 },
   clouds: { id: 'bg_clouds', factor: 0.03, anchor: 'top', offset: 0, drift: 0.006 },
-  far: { id: 'bg_castle', factor: 0.07, anchor: 'bottom', offset: 110 },
-  mid: { id: 'bg_mountains', factor: 0.16, anchor: 'bottom', offset: 40 },
-  near: { id: 'bg_trees', factor: 0.32, anchor: 'bottom', offset: -4 },
+  // Asset Pack V1: the castle and mountain strips do not join at their edges, so they mirror-repeat.
+  far: { id: 'bg_castle', factor: 0.07, anchor: 'bottom', offset: 196, mirror: true },
+  mid: { id: 'bg_mountains', factor: 0.16, anchor: 'bottom', offset: 150, mirror: true },
+  near: { id: 'bg_trees', factor: 0.32, anchor: 'bottom', offset: 118 },
   foreground: { id: 'fg_flowers', factor: 1.15, anchor: 'bottom', offset: -6, alpha: 1 },
 } satisfies Record<string, ParallaxLayer>;

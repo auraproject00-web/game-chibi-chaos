@@ -1,5 +1,131 @@
 {
   "candyMeadow": {
-    "files": []
+    "files": [
+      {
+        "type": "image",
+        "key": "cm_bg_sky",
+        "url": "assets/candy-meadow/bg/bg_sky.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_bg_clouds",
+        "url": "assets/candy-meadow/bg/bg_clouds.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_bg_castle",
+        "url": "assets/candy-meadow/bg/bg_castle.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_bg_mountains",
+        "url": "assets/candy-meadow/bg/bg_mountains.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_bg_trees",
+        "url": "assets/candy-meadow/bg/bg_trees.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_fg_flowers",
+        "url": "assets/candy-meadow/fg/fg_flowers.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_tiles_ground",
+        "url": "assets/candy-meadow/tiles/tiles_ground.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_tiles_ledge",
+        "url": "assets/candy-meadow/tiles/tiles_ledge.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_tiles_crack",
+        "url": "assets/candy-meadow/tiles/tiles_crack.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_hz_spike",
+        "url": "assets/candy-meadow/hazards/hz_spike.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_hz_flag_off",
+        "url": "assets/candy-meadow/hazards/hz_flag_off.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_hz_flag_on",
+        "url": "assets/candy-meadow/hazards/hz_flag_on.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_hz_portal",
+        "url": "assets/candy-meadow/hazards/hz_portal.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_lolliTree",
+        "url": "assets/candy-meadow/props/prop_lolliTree.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_cottonTree",
+        "url": "assets/candy-meadow/props/prop_cottonTree.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_flowers",
+        "url": "assets/candy-meadow/props/prop_flowers.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_fence",
+        "url": "assets/candy-meadow/props/prop_fence.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_sign",
+        "url": "assets/candy-meadow/props/prop_sign.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_bush",
+        "url": "assets/candy-meadow/props/prop_bush.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_candyCane",
+        "url": "assets/candy-meadow/props/prop_candyCane.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_cupcake",
+        "url": "assets/candy-meadow/props/prop_cupcake.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_balloon",
+        "url": "assets/candy-meadow/props/prop_balloon.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_wrapped",
+        "url": "assets/candy-meadow/props/prop_wrapped.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_starCandy",
+        "url": "assets/candy-meadow/props/prop_starCandy.png"
+      },
+      {
+        "type": "image",
+        "key": "cm_prop_gumdrop",
+        "url": "assets/candy-meadow/props/prop_gumdrop.png"
+      }
+    ]
   }
 }
