@@ -71,6 +71,11 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 | `movingPlatform` | Candy wafer that shuttles between two points and pauses at each end; carries MOCHI | Learn the rhythm |
 | `fakeFinish` | Decoy portal that hops away and vanishes; the real portal is hidden until `revealX` | Keep going past the decoy |
 | `decoyPortal` | Look-alike portal (spins the other way, pink glow): `flee` hops away and pops spikes, `drop` makes its cracked ground fall | Learn the tells, jump past it |
+| `mirrorPlatform` | Illusion platform with no collision; it always shimmers (alpha pulse, waver, glints) and shatters when MOCHI falls through | Only stand on still platforms |
+| `mirrorPanel` | Tall mirror (scenery) that shows MOCHI's reflection | - |
+| `ghostMochi` | In a zone, a ghost replays MOCHI's moves `delayMs` later and presses plates; a plate holds a gate open or a bridge solid; closing ones blink first | Stand on the plate long enough, then go |
+| `realityShift` | Crystal platforms in two phases turn SOLID/PHANTOM on one fixed clock (restarts on respawn); vanishing ones blink, appearing ones fill in, lamps show the rhythm | Jump when the next one lights up |
+| `lieDoor` | Labelled door: `trap` stands on illusion floor, `warp` sends MOCHI back to `warpTo` (no death), `true` hides the real portal and opens when MOCHI is near | Trust the tells, not the labels |
 
 Example: `{ type: 'baitCoin', x: 32, y: 11, spikes: { x: 31, y: 14, w: 3 } }`.
 Use only a few trap types per level and introduce them one at a time. Every trap fires at the same
@@ -91,6 +96,13 @@ to jump straight into level N (dev only, ignores locks); add `&cp=M` to start at
    different surprises before the real one on top of three pillars). All tuning numbers (gaps,
    widths, delays, speeds, warning time) are in `L2` at the top of `src/levels/level02.ts`, next to
    MOCHI's jump reach worked out from the real physics.
+3. **The Game Is Lying** (Illusion World, Nightmare 8.5/10, unlocked by finishing Level 2): Fake
+   Tutorial (signs that lie; mint sprouts only grow on real ground, tiny holes sit over sleeping
+   spikes), Mirror Maze (real platforms are still, illusions shimmer), Ghost Mochi (a ghost replays
+   MOCHI 1.5 s late and holds plates for a gate and a bridge), Reality Shift (mint/pink platforms on
+   a fixed cycle) and The Final Lie (three labelled doors: an illusion, a warp back, and the real
+   finish). Signs and labels are level scenery (`decor` in the level data). Tuning is in `L3` at the
+   top of `src/levels/level03.ts`.
 
 ## Death reactions
 

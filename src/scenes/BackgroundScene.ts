@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import type { LevelTheme } from '../levels/types';
+
+const CLOUD_TINT: Record<LevelTheme, number> = { meadow: 0xffffff, candy: 0xffe6f2, illusion: 0xf3ecff };
 
 /**
  * Parallax backdrop rendered beneath every other scene, unaffected by the game camera zoom.
@@ -28,14 +31,14 @@ export class BackgroundScene extends Phaser.Scene {
   }
 
   /** Swaps the backdrop art for a level theme (menus and Level 01 use 'meadow'). */
-  setTheme(theme: 'meadow' | 'candy'): void {
+  setTheme(theme: LevelTheme): void {
     if (!this.sky) return;
-    const sfx = theme === 'candy' ? '_candy' : '';
+    const sfx = theme === 'meadow' ? '' : `_${theme}`;
     if (this.sky.texture.key === `sky${sfx}`) return;
     this.sky.setTexture(`sky${sfx}`);
     this.far.setTexture(`hills_far${sfx}`);
     this.near.setTexture(`hills_near${sfx}`);
-    this.clouds.setTint(theme === 'candy' ? 0xffe6f2 : 0xffffff);
+    this.clouds.setTint(CLOUD_TINT[theme]);
     this.layout();
   }
 

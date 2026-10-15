@@ -8,6 +8,7 @@ import { createTrap } from '../traps/TrapFactory';
 import type { Trap } from '../traps/types';
 import { HintBubble } from '../ui/HintBubble';
 import type { PlacedHint } from '../managers/TutorialManager';
+import { buildDecor } from './decor';
 import type { LevelData } from './types';
 
 export interface BuiltLevel {
@@ -41,6 +42,8 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
     const zone = scene.add.zone(x + w / 2, y + h / 2, w, h);
     solids.add(zone);
   }
+
+  if (data.decor) buildDecor(scene, data.decor);
 
   const spikes = (data.spikes ?? []).map(
     (s) => new SpikeTrap(scene, { x: s.x * TILE, surfaceY: s.y * TILE, tiles: s.w, hidden: false }),

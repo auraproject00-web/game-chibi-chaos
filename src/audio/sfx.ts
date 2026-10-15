@@ -25,7 +25,13 @@ export type SfxName =
   | 'boing'
   | 'narSoft'
   | 'narSavage'
-  | 'reveal';
+  | 'reveal'
+  | 'mirror'
+  | 'ghost'
+  | 'shiftWarn'
+  | 'shift'
+  | 'fakeDoor'
+  | 'trueDoor';
 
 /** The same sound is skipped if it was played less than this many ms ago. */
 export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
@@ -46,6 +52,12 @@ export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   narSoft: 250,
   narSavage: 300,
   reveal: 1000,
+  mirror: 150,
+  ghost: 600,
+  shiftWarn: 300,
+  shift: 300,
+  fakeDoor: 400,
+  trueDoor: 1500,
 };
 export const DEFAULT_MIN_GAP_MS = 50;
 
@@ -144,6 +156,38 @@ export function playRecipe(s: Synth, name: SfxName, t: number): number {
       // The real portal appears: rising sparkly arpeggio.
       [783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => s.tone('triangle', f, f, t + i * 0.07, 0.18, 0.08));
       s.tone('sine', 2093, 2093, t + 0.3, 0.35, 0.04);
+      return 0.68;
+    case 'mirror':
+      // Glass shimmer breaking into sparkles.
+      [2637, 3136, 2349, 3520].forEach((f, i) => s.tone('sine', f, f * 0.98, t + i * 0.035, 0.16, 0.035));
+      s.burst(t, 0.12, 6000, 0.05, 'highpass');
+      return 0.3;
+    case 'ghost':
+      // The ghost wakes up: airy, soft up-sweep with a little shimmer.
+      s.tone('sine', 330, 660, t, 0.4, 0.06);
+      s.tone('triangle', 495, 990, t + 0.05, 0.36, 0.03);
+      s.wobble(t + 0.2, 990, 1100, 0.3, 0.025, 9);
+      return 0.52;
+    case 'shiftWarn':
+      // Soft double tick: the platforms are about to change.
+      s.tone('sine', 1318.5, 1318.5, t, 0.05, 0.05);
+      s.tone('sine', 1318.5, 1318.5, t + 0.12, 0.05, 0.04);
+      return 0.18;
+    case 'shift':
+      // Reality flips: a gentle whoom.
+      s.tone('sine', 220, 440, t, 0.16, 0.07);
+      s.burst(t, 0.14, 1600, 0.04, 'bandpass');
+      return 0.18;
+    case 'fakeDoor':
+      // Creaky door, then a cheeky honk.
+      s.wobble(t, 300, 380, 0.22, 0.05, 22);
+      s.tone('square', 233, 220, t + 0.24, 0.12, 0.05);
+      s.tone('square', 196, 185, t + 0.38, 0.18, 0.05);
+      return 0.58;
+    case 'trueDoor':
+      // The real door opens: bright rising chime.
+      [659.25, 830.61, 987.77, 1318.5].forEach((f, i) => s.tone('triangle', f, f, t + i * 0.06, 0.2, 0.07));
+      s.tone('sine', 1975.5, 1975.5, t + 0.26, 0.4, 0.035);
       return 0.68;
     case 'narSavage':
       // Savage: dramatic "wah-wah" with a wobbly ending.
