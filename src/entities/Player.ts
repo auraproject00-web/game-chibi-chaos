@@ -304,7 +304,8 @@ export class Player {
     }
 
     // Counted down after use, so even at a low frame rate each face shows for at least one frame.
-    if (this.prepMs > 0) this.prepMs -= deltaMs;
+    // The prepare face only counts down once Mochi has left the ground, so a slow frame cannot skip it.
+    if (this.prepMs > 0 && !grounded) this.prepMs -= deltaMs;
     if (this.landMs > 0) this.landMs -= deltaMs;
 
     const sx = BASE_SCALE * this.popScale * this.squashX * shapeX;
