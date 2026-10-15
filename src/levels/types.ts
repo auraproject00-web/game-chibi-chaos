@@ -1,3 +1,4 @@
+import type { LevelLines } from '../managers/trollLines';
 import type { TrapConfigWithId } from '../traps/types';
 
 /**
@@ -39,9 +40,13 @@ export interface HintDef extends PointDef {
   teach?: TutorialSkill;
 }
 
+/** Visual theme: platform style, backdrop and ambient particles. Default 'meadow'. */
+export type LevelTheme = 'meadow' | 'candy';
+
 export interface LevelData {
   id: number;
   name: string;
+  theme?: LevelTheme;
   /** Level size in tiles. */
   width: number;
   height: number;
@@ -56,4 +61,6 @@ export interface LevelData {
   checkpoints?: PointDef[];
   finish: PointDef;
   hints?: HintDef[];
+  /** Narrator lines only this level uses (per intensity and key), tried before the shared ones. */
+  trollLines?: LevelLines;
 }

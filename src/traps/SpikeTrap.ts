@@ -16,6 +16,11 @@ export interface SpikeTrapOptions {
    */
   triggerFrom?: number;
   triggerTo?: number;
+  /**
+   * Spike warning: when triggered, the tips peek out of the ground for this long (harmless)
+   * before the spikes shoot up and become deadly. 0 (default) pops them at once.
+   */
+  warnMs?: number;
 }
 
 const SPIKE_H = 24;
@@ -28,6 +33,8 @@ export class SpikeTrap {
   private readonly sprite: Phaser.GameObjects.TileSprite;
   private readonly hitArea: Phaser.Geom.Rectangle;
   private revealed: boolean;
+  private warning = false;
+  private warnTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -57,18 +64,36 @@ export class SpikeTrap {
     return this.revealed;
   }
 
+  /** True while the tips are peeking out, before the spikes become deadly. */
+  get isWarning(): boolean {
+    return this.warning;
+  }
+
   /** Checks the trigger zone; returns true if the spikes popped this frame. */
   update(player: Phaser.Geom.Rectangle): boolean {
     const { triggerFrom, triggerTo } = this.opts;
-    if (this.revealed || triggerFrom === undefined || triggerTo === undefined) return false;
+    if (this.revealed || this.warning || triggerFrom === undefined || triggerTo === undefined) return false;
     const cx = player.centerX;
     if (cx < triggerFrom || cx > triggerTo) return false;
-    this.reveal();
+    if (this.opts.warnMs) this.warn(this.opts.warnMs);
+    else this.reveal();
     return true;
+  }
+
+  /** Tips peek out (harmless) and the spikes shoot up after `ms`. */
+  warn(ms: number): void {
+    if (this.revealed || this.warning) return;
+    this.warning = true;
+    AudioManager.play('trap');
+    this.scene.tweens.add({ targets: this.sprite, y: this.opts.surfaceY + SPIKE_H - 9, duration: 60, ease: 'Quad.easeOut' });
+    this.warnTimer = this.scene.time.delayedCall(ms, () => this.reveal());
   }
 
   reveal(): void {
     if (this.revealed) return;
+    this.warnTimer?.remove(false);
+    this.warnTimer = null;
+    this.warning = false;
     this.revealed = true;
     AudioManager.play('spike');
     this.scene.tweens.add({
@@ -82,6 +107,9 @@ export class SpikeTrap {
   /** Pulls the spikes back into the ground (used by traps that reset on respawn). */
   hide(): void {
     this.scene.tweens.killTweensOf(this.sprite);
+    this.warnTimer?.remove(false);
+    this.warnTimer = null;
+    this.warning = false;
     this.revealed = false;
     this.sprite.setY(this.opts.surfaceY + SPIKE_H + 2).setDepth(5);
   }

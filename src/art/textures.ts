@@ -101,6 +101,73 @@ export function drawPlatform(g: Phaser.GameObjects.Graphics, w: number, h: numbe
   }
 }
 
+/**
+ * Candy Meadow platform (Level 02): striped candy body with a soft pink frosting-grass cap and
+ * sprinkles. Same size and outline as the meadow platform, so it reads as solid ground; fake
+ * ones get the same small crack as a tell.
+ */
+export function drawCandyPlatform(g: Phaser.GameObjects.Graphics, w: number, h: number, cracked = false): void {
+  const rand = seeded(Math.round(w * 29 + h * 13));
+  const r = Math.min(12, h / 2, w / 2);
+  const capH = Math.min(14, h - 4);
+
+  // Candy body: cream with soft lavender bands and little candy dots.
+  g.fillStyle(0xfff0f6, 1);
+  g.fillRoundedRect(0, 4, w, h - 4, { tl: 4, tr: 4, bl: r, br: r });
+  g.fillStyle(0xeadfff, 1);
+  for (let y = capH + 8; y < h - 10; y += 16) g.fillRect(3, y, w - 6, 6);
+  const dots = Math.floor((w * h) / 900);
+  for (let i = 0; i < dots; i++) {
+    g.fillStyle(rand() > 0.5 ? 0xffc6d6 : 0xd8f3df, 1);
+    g.fillCircle(8 + rand() * (w - 16), capH + 8 + rand() * Math.max(1, h - capH - 18), 2.2);
+  }
+  if (h > 28) {
+    g.fillStyle(0xf3c6dc, 1);
+    g.fillRoundedRect(0, h - 8, w, 8, { tl: 0, tr: 0, bl: r, br: r });
+  }
+  if (cracked) {
+    g.lineStyle(1.6, 0xb07aa0, 0.8);
+    const cx = w * 0.5;
+    g.strokePoints(
+      [
+        { x: cx - 6, y: capH + 2 },
+        { x: cx - 2, y: capH + 7 },
+        { x: cx - 5, y: capH + 11 },
+        { x: cx, y: Math.min(h - 3, capH + 16) },
+      ],
+      false,
+    );
+  }
+  g.lineStyle(2, 0xc58fb8, 1);
+  g.strokeRoundedRect(0, 4, w, h - 4, { tl: 4, tr: 4, bl: r, br: r });
+
+  // Frosting-grass cap with soft drips.
+  g.fillStyle(0xffbfd3, 1);
+  g.fillRoundedRect(-2, 0, w + 4, capH, Math.min(7, capH / 2));
+  for (let x = 6; x < w; x += 12) g.fillCircle(x, capH, 5);
+  for (let x = 14; x < w - 6; x += 37) g.fillRoundedRect(x, capH, 6, 6 + rand() * 6, 3);
+  g.fillStyle(0xffe1ec, 1);
+  g.fillRoundedRect(2, 2.5, w - 4, 4, 2);
+  g.lineStyle(2, 0xe0809a, 1);
+  g.strokeRoundedRect(-2, 0, w + 4, capH, Math.min(7, capH / 2));
+
+  // Sprinkles.
+  const colors = [PALETTE.mint, PALETTE.lavender, PALETTE.cream, PALETTE.sky, PALETTE.peach];
+  const n = Math.floor(w / 14);
+  for (let i = 0; i < n; i++) {
+    g.fillStyle(colors[Math.floor(rand() * colors.length)], 1);
+    const sx = 6 + rand() * (w - 12);
+    const sy = 4 + rand() * (capH - 8);
+    g.fillRoundedRect(sx, sy, 5, 2.2, 1.1);
+  }
+}
+
+/** Visual theme used for platforms baked from now on (set by LevelBuilder per level). */
+let platformTheme: 'meadow' | 'candy' = 'meadow';
+export function setPlatformTheme(theme: 'meadow' | 'candy'): void {
+  platformTheme = theme;
+}
+
 /** Pixels of padding around a baked platform texture (grass cap and flowers overhang the box). */
 export const PLATFORM_PAD = { x: 2, y: 3 } as const;
 
@@ -109,11 +176,39 @@ export const PLATFORM_PAD = { x: 2, y: 3 } as const;
  * to render than Graphics, which WebGL re-tessellates every frame.
  */
 export function platformTexture(scene: Phaser.Scene, w: number, h: number, cracked = false): string {
-  const key = `platform_${w}x${h}${cracked ? '_cracked' : ''}`;
+  const theme = platformTheme;
+  const key = `platform_${theme === 'candy' ? 'candy_' : ''}${w}x${h}${cracked ? '_cracked' : ''}`;
   if (!scene.textures.exists(key)) {
     make(scene, key, w + PLATFORM_PAD.x * 2, h + PLATFORM_PAD.y, (g) => {
       g.translateCanvas(PLATFORM_PAD.x, PLATFORM_PAD.y);
-      drawPlatform(g, w, h, cracked);
+      if (theme === 'candy') drawCandyPlatform(g, w, h, cracked);
+      else drawPlatform(g, w, h, cracked);
+    });
+  }
+  return key;
+}
+
+/** Height in px of a moving-platform wafer. */
+export const WAFER_H = 18;
+
+/** Candy wafer for moving platforms: pink and cream layers, clearly different from ground. */
+export function waferTexture(scene: Phaser.Scene, w: number): string {
+  const key = `wafer_${w}`;
+  if (!scene.textures.exists(key)) {
+    make(scene, key, w, WAFER_H + 2, (g) => {
+      g.fillStyle(0xe0809a, 1);
+      g.fillRoundedRect(0, 2, w, WAFER_H, 7);
+      g.fillStyle(0xffb3c8, 1);
+      g.fillRoundedRect(0, 0, w, WAFER_H, 7);
+      g.fillStyle(0xfff3d6, 1);
+      g.fillRect(4, 6, w - 8, 3);
+      g.fillRect(4, 11, w - 8, 2);
+      g.lineStyle(1.2, 0xe0809a, 0.7);
+      for (let x = 12; x < w - 6; x += 12) g.lineBetween(x, 2, x, WAFER_H - 3);
+      g.fillStyle(0xffffff, 0.55);
+      g.fillRoundedRect(4, 2, w - 8, 2.5, 1.2);
+      g.lineStyle(2, 0xc0607a, 1);
+      g.strokeRoundedRect(1, 1, w - 2, WAFER_H - 2, 7);
     });
   }
   return key;
@@ -147,6 +242,10 @@ export function generateTextures(scene: Phaser.Scene): void {
   generateMochiTextures(scene);
 
   // Particles.
+  make(scene, 'sparkle', 16, 16, (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints(starPoints(8, 8, 7.5, 2.6, 4), true);
+  });
   make(scene, 'dot', 16, 16, (g) => {
     g.fillStyle(0xffffff, 1);
     g.fillCircle(8, 8, 7);
@@ -525,6 +624,65 @@ function generateBackgroundTextures(scene: Phaser.Scene): void {
     g.fillTriangle(316, 52, 327, 26, 338, 52);
     g.fillTriangle(382, 52, 393, 26, 404, 52);
     g.fillTriangle(347, 32, 360, 4, 373, 32);
+  });
+
+  // Candy Meadow (Level 02): pinker sky, lavender candy hills, lollipops and candy canes.
+  make(scene, 'sky_candy', 8, 256, (g) => {
+    const top = 0xc9c4ff;
+    const mid = 0xf1dcff;
+    const bottom = 0xffe0ec;
+    for (let y = 0; y < 256; y += 4) {
+      const t = y / 255;
+      const c = t < 0.6 ? lerpColor(top, mid, t / 0.6) : lerpColor(mid, bottom, (t - 0.6) / 0.4);
+      g.fillStyle(c, 1);
+      g.fillRect(0, y, 8, 4);
+    }
+  });
+  make(scene, 'hills_far_candy', 512, 220, (g) => {
+    g.fillStyle(0xe9cdf5, 1);
+    for (const dx of [-512, 0, 512]) {
+      g.fillCircle(90 + dx, 215, 125);
+      g.fillCircle(310 + dx, 235, 150);
+      g.fillCircle(480 + dx, 205, 115);
+    }
+    g.fillRect(0, 190, 512, 30);
+    // Gumdrop mountains with frosting tops.
+    for (const [x, hgt, c] of [[60, 120, 0xf6c6dd], [250, 150, 0xd9c6ff], [420, 110, 0xf6c6dd]] as const) {
+      g.fillStyle(c, 1);
+      g.fillEllipse(x, 220 - hgt / 2, 120, hgt);
+      g.fillStyle(0xffffff, 0.7);
+      g.fillEllipse(x, 220 - hgt + 16, 60, 22);
+    }
+  });
+  make(scene, 'hills_near_candy', 512, 180, (g) => {
+    for (const dx of [-512, 0, 512]) {
+      // Lollipop.
+      g.fillStyle(0xfff3d6, 1);
+      g.fillRect(150 + dx, 66, 6, 60);
+      g.fillStyle(0xffb3c1, 1);
+      g.fillCircle(153 + dx, 58, 24);
+      g.lineStyle(5, 0xffffff, 0.9);
+      g.beginPath();
+      g.arc(153 + dx, 58, 14, 0, Math.PI * 1.5);
+      g.strokePath();
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(153 + dx, 58, 5);
+      // Candy cane.
+      g.lineStyle(7, 0xfff3d6, 1);
+      g.beginPath();
+      g.arc(418 + dx, 78, 12, Math.PI, 0);
+      g.strokePath();
+      g.lineBetween(430 + dx, 78, 430 + dx, 128);
+      g.lineStyle(3, 0xff8fa3, 1);
+      for (let y = 84; y < 126; y += 10) g.lineBetween(427 + dx, y, 433 + dx, y + 5);
+      // Soft pink hills.
+      g.fillStyle(0xf7cfe2, 1);
+      g.fillCircle(100 + dx, 190, 110);
+      g.fillCircle(330 + dx, 200, 130);
+      g.fillCircle(520 + dx, 180, 90);
+    }
+    g.fillStyle(0xf7cfe2, 1);
+    g.fillRect(0, 160, 512, 20);
   });
 
   // Near hills: mint with round trees, tiles horizontally.

@@ -5,8 +5,9 @@ import { SpikeTrap } from './SpikeTrap';
 import type { FakeCheckpointConfig, Trap, TrapContext } from './types';
 
 /**
- * Fake Checkpoint: looks like a flag (tell: its pole is crooked) but never saves. Touching it
- * turns it into a cheeky troll flag and can pop hidden spikes. Once exposed it stays exposed.
+ * Fake Checkpoint: looks like a flag (tells: its pole is crooked and it sways a little) but never
+ * saves. Touching it turns it into a cheeky troll flag and can pop hidden spikes. Once exposed it
+ * stays exposed.
  */
 export class FakeCheckpointTrap implements Trap {
   readonly type = 'fakeCheckpoint';
@@ -24,6 +25,8 @@ export class FakeCheckpointTrap implements Trap {
     const x = cfg.x * TILE + TILE / 2;
     const bottomY = cfg.y * TILE;
     this.sprite = scene.add.image(x, bottomY + 2, 'flag_fake').setOrigin(0.26, 1).setDepth(12);
+    // Second small tell: real flags stand still, this one sways a little, like it is nervous.
+    scene.tweens.add({ targets: this.sprite, angle: { from: -3, to: 3 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     // Same tall trigger column as a real checkpoint.
     this.area = new Phaser.Geom.Rectangle(x - 22, bottomY - 260, 48, 260);
     this.spikes = cfg.spikes
@@ -53,6 +56,7 @@ export class FakeCheckpointTrap implements Trap {
     });
     AudioManager.playTroll('hehe');
     ctx.fx.pop(this.sprite.x + 10, this.sprite.y - 90, 'Hehe! Palsu!');
+    ctx.sprung(this);
     if (this.spikes) {
       this.spikes.reveal();
       ctx.fx.shake(120, 0.004);

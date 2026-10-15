@@ -17,7 +17,10 @@ export type TrapConfig =
   | BaitCoinConfig
   | ReverseControlsConfig
   | FakeCheckpointConfig
-  | FallingPlatformConfig;
+  | FallingPlatformConfig
+  | MovingPlatformConfig
+  | FakeFinishConfig
+  | DecoyPortalConfig;
 
 export type TrapType = TrapConfig['type'];
 
@@ -43,6 +46,8 @@ export interface SurpriseSpikesConfig {
   w: number;
   /** Player-center range (tiles) that pops them. Default: the span plus half a tile. */
   trigger?: { from: number; to: number };
+  /** Spike warning: tips peek out this long (harmless) before the spikes shoot up. Default 0. */
+  warnMs?: number;
 }
 
 /** 3. The finish portal runs away when MOCHI gets close. It never runs back. */
@@ -101,6 +106,61 @@ export interface FallingPlatformConfig {
   delayMs?: number;
 }
 
+/**
+ * 9. A candy wafer that slides back and forth between two spots at a steady speed (always the
+ * same rhythm, so it can be learned). MOCHI rides along when standing on it.
+ */
+export interface MovingPlatformConfig {
+  type: 'movingPlatform';
+  /** Start position: left tile and the row of its top surface. */
+  x: number;
+  y: number;
+  w: number;
+  /** Second end of the path (same units as x/y). */
+  toX: number;
+  toY?: number;
+  /** Speed in px per second. Default 80. */
+  speed?: number;
+  /** Pause at each end (ms). Default 500. */
+  waitMs?: number;
+}
+
+/**
+ * 10. A decoy finish portal that hops away when MOCHI gets close, then vanishes. The real portal
+ * (the level's `finish`) stays hidden until MOCHI passes `revealX`. Progress is never undone.
+ */
+export interface FakeFinishConfig {
+  type: 'fakeFinish';
+  /** Where the decoy first stands (ground row). */
+  x: number;
+  y: number;
+  /** Each hop fires once, in order, when the player center passes `triggerX`. */
+  hops: { triggerX: number; x: number; y: number }[];
+  /** Player center tile that makes the decoy vanish (after its last hop). */
+  vanishX: number;
+  /** Player center tile that reveals the real portal. */
+  revealX: number;
+}
+
+/**
+ * 11. A look-alike finish portal (tells: spins the other way, pink glow) that springs a surprise
+ * when MOCHI's center passes `triggerX`. It never completes the level and resets on respawn.
+ */
+export interface DecoyPortalConfig {
+  type: 'decoyPortal';
+  /** Where it stands (ground row). */
+  x: number;
+  y: number;
+  triggerX: number;
+  /** `flee`: hops to `fleeTo` and vanishes, popping `spikes`. `drop`: its `floor` collapses. */
+  effect: 'flee' | 'drop';
+  fleeTo?: { x: number; y: number };
+  /** Hidden spikes (row defaults to `y`). `delayMs` after the trigger, then `warnMs` of peeking. */
+  spikes?: { x: number; y?: number; w: number; delayMs?: number; warnMs?: number };
+  /** Cracked ground under the decoy, top at row `y`. It wobbles `delayMs` (default 250) and falls. */
+  floor?: { x: number; w: number; h?: number; delayMs?: number };
+}
+
 /** What a trap may touch in the running game. */
 export interface TrapContext {
   readonly scene: Phaser.Scene;
@@ -116,6 +176,11 @@ export interface TrapContext {
   triggered(source: Trap): void;
   /** Swaps left/right input for `ms` milliseconds. */
   reverseControls(ms: number): void;
+  /**
+   * A trap went off without killing anyone (coin grabbed, fake flag touched, decoy portal gone).
+   * The narrator may comment. `key` picks the line set (defaults to the trap type).
+   */
+  sprung(source: Trap, key?: string): void;
 }
 
 export interface Trap {
@@ -128,6 +193,8 @@ export interface Trap {
   readonly solids?: Phaser.GameObjects.GameObject[];
   /** Moving bodies that need their own collider with the player. */
   readonly bodies?: Phaser.GameObjects.GameObject[];
+  /** Called once after the level is built, before the first frame. */
+  init?(ctx: TrapContext): void;
   /** Called every frame while MOCHI is alive, with MOCHI's hitbox. */
   update?(player: Phaser.Geom.Rectangle, ctx: TrapContext): void;
   /** Called when MOCHI collides with one of this trap's bodies. */

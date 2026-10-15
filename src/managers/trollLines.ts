@@ -9,7 +9,8 @@ export type LineKey =
   | 'quickDeath'
   | 'passedTrap'
   | 'idle'
-  | `trap:${string}`;
+  | `trap:${string}`
+  | `sprung:${string}`;
 
 /**
  * Narrator lines per intensity. The first line of each list is the signature one and is used
@@ -31,6 +32,13 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'trap:baitCoin': ['Koinnya jebakan, hehe. Lain kali skip aja~'],
     'trap:fakeCheckpoint': ['Bendera yang miring itu palsu, lho~'],
     'trap:spike': ['Hati-hati durinya ya~'],
+    'trap:movingPlatform': ['Platformnya jalan terus, tunggu dia datang ya~', 'Lompat pas platformnya dekat, pelan-pelan~'],
+    'sprung:baitCoin': ['Koinnya jebakan, hehe. Jalan di bawahnya aja~'],
+    'sprung:fakeCheckpoint': ['Ups, bendera itu bohongan. Yang asli tegak lurus~'],
+    'sprung:fakeFinish': ['Hehe, itu portal bohongan. Yang asli nanti muncul~'],
+    'sprung:realFinish': ['Ini portal yang asli. Ayo, sedikit lagi!'],
+    'trap:decoyPortal': ['Portalnya nakal ya. Coba perhatikan putarannya~'],
+    'sprung:decoyPortal': ['Hehe, itu portal bohongan~', 'Ups, portal yang itu cuma pura-pura~'],
   },
   chaos: {
     finishAfterManyDeaths: ['AKHIRNYA! GUA UDAH MAU PENSIUN!', 'Selamat… gua sampe ketiduran nunggunya.'],
@@ -46,6 +54,13 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'trap:baitCoin': ['Koin gratis? Di game ini? 🤣', 'Serakah dikit, langsung kena.'],
     'trap:fakeCheckpoint': ['Bendera miring kok dipercaya?', 'Checkpoint-nya palsu, hehe.'],
     'trap:spike': ['BRO, ITU DURI BUKAN TEMEN!', 'Itu duri. Bukan bantal.', 'Durinya kelihatan jelas, lho…'],
+    'trap:movingPlatform': ['Platformnya punya jadwal sendiri, bro.', 'Telat sedetik, langsung terjun. Hehe.'],
+    'sprung:baitCoin': ['GRATIS? DI GAME INI? WKWK.', 'Koinnya manis, jebakannya lebih manis.'],
+    'sprung:fakeCheckpoint': ['CHECKPOINT? PERCAYA AJA TERUS.', 'Benderanya miring, niatnya juga.'],
+    'sprung:fakeFinish': ['FINISH? MANA ADA SEMUDAH ITU.', 'Portalnya kabur, hehe. Kejar dong!'],
+    'sprung:realFinish': ['Oke oke… yang ini ASLI. Sumpah.'],
+    'trap:decoyPortal': ['Portal KW kok dipercaya?', 'Portalnya cuma cosplay, bro.'],
+    'sprung:decoyPortal': ['Portalnya cuma cosplay, bro.', 'Itu portal KW, hehe.'],
   },
   savage: {
     finishAfterManyDeaths: ['AKHIRNYA! Gua udah nulis surat wasiat tadi.', 'Selamat! Portalnya sampe tepuk tangan sambil nangis.'],
@@ -61,10 +76,23 @@ export const TROLL_LINES: Record<TrollIntensity, Partial<Record<LineKey, string[
     'trap:baitCoin': ['Koinnya 1, nyawanya juga 1. Impas.', 'Mata duitan detected.'],
     'trap:fakeCheckpoint': ['Checkpoint palsu, harapan juga palsu.', 'Bendera miring aja dipercaya.'],
     'trap:spike': ['Duri itu kelihatan dari luar angkasa.', 'Peluk duri? Berani juga.'],
+    'trap:movingPlatform': ['Platform itu nggak nungguin siapa-siapa.', 'Timing-nya meleset kayak sinyal di lift.'],
+    'sprung:baitCoin': ['Mata duitan detected. Lagi.', 'Koin satu, nyawa satu. Impas, kan?'],
+    'sprung:fakeCheckpoint': ['Trust issues level: bendera.', 'Checkpoint palsu, harapan juga palsu.'],
+    'sprung:fakeFinish': ['Lu kira udah menang? Lucu.', 'Portal itu lari lebih kenceng dari Mochi.'],
+    'sprung:realFinish': ['Yang ini asli. Mungkin. Hehe.'],
+    'trap:decoyPortal': ['Portal KW, harapan juga KW.', 'Ditipu portal. Lagi.'],
+    'sprung:decoyPortal': ['Lu kira itu finish? Gemes.', 'Portal KW detected.'],
   },
 };
 
-/** Lines for a key in an intensity, falling back to Chaos when a mode has none. */
-export function linesFor(intensity: TrollIntensity, key: LineKey): string[] | undefined {
-  return TROLL_LINES[intensity][key] ?? TROLL_LINES.chaos[key];
+/** Extra lines a level brings for some keys and intensities (see LevelData.trollLines). */
+export type LevelLines = Partial<Record<TrollIntensity, Partial<Record<LineKey, string[]>>>>;
+
+/**
+ * Lines for a key in an intensity: the level's own set first, then the shared set, falling back
+ * to Chaos when a mode has none.
+ */
+export function linesFor(intensity: TrollIntensity, key: LineKey, level?: LevelLines): string[] | undefined {
+  return level?.[intensity]?.[key] ?? TROLL_LINES[intensity][key] ?? TROLL_LINES.chaos[key];
 }

@@ -11,6 +11,8 @@ export const GameEvents = {
   PlayerDied: 'player-died',
   PlayerRespawned: 'player-respawned',
   TrapPassed: 'trap-passed',
+  /** A trap went off without a death (coin grabbed, fake flag touched, decoy portal gone). */
+  TrapSprung: 'trap-sprung',
   /** The troll narrator wants to say something. */
   NarratorSay: 'narrator-say',
 } as const;
@@ -37,6 +39,13 @@ export interface DeathContext {
 export interface TrapPassedPayload {
   trapId: string;
   trapType: string;
+}
+
+export interface TrapSprungPayload {
+  trapId: string;
+  trapType: string;
+  /** Which line set fits (e.g. `fakeFinish`, `realFinish`). */
+  key: string;
 }
 
 export interface NarratorLine {

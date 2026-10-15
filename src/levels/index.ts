@@ -1,4 +1,5 @@
 import { level01 } from './level01';
+import { level02 } from './level02';
 import { trapLab } from './trapLab';
 import type { LevelData } from './types';
 
@@ -6,7 +7,7 @@ import type { LevelData } from './types';
 export const PLANNED_LEVELS = 10;
 
 /** Register new levels here. Order = progression. */
-export const LEVELS: LevelData[] = [level01];
+export const LEVELS: LevelData[] = [level01, level02];
 
 /** Dev-only levels: reachable by id, never listed in level select. */
 const DEV_LEVELS: LevelData[] = import.meta.env.DEV ? [trapLab] : [];

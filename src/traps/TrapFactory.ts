@@ -1,8 +1,11 @@
 import { BaitCoinTrap } from './BaitCoinTrap';
+import { DecoyPortalTrap } from './DecoyPortalTrap';
 import { FakeCheckpointTrap } from './FakeCheckpointTrap';
+import { FakeFinishTrap } from './FakeFinishTrap';
 import { FakeFloorTrap } from './FakeFloorTrap';
 import { FallingPlatformTrap } from './FallingPlatformTrap';
 import { InvisibleWallTrap } from './InvisibleWallTrap';
+import { MovingPlatformTrap } from './MovingPlatformTrap';
 import { ReverseControlsTrap } from './ReverseControlsTrap';
 import { RunningPortalTrap } from './RunningPortalTrap';
 import { SurpriseSpikesTrap } from './SurpriseSpikesTrap';
@@ -33,5 +36,11 @@ function build(scene: Phaser.Scene, cfg: TrapConfig): Trap {
       return new FakeCheckpointTrap(scene, cfg);
     case 'fallingPlatform':
       return new FallingPlatformTrap(scene, cfg);
+    case 'movingPlatform':
+      return new MovingPlatformTrap(scene, cfg);
+    case 'fakeFinish':
+      return new FakeFinishTrap(scene, cfg);
+    case 'decoyPortal':
+      return new DecoyPortalTrap(scene, cfg);
   }
 }
