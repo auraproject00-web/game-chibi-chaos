@@ -1,13 +1,14 @@
 import type { LevelData } from './types';
 
 /**
- * Level 1 - "Hello Mochi!" (tutorial).
+ * Level 1 - "Hello Mochi!" (tutorial), set in the Candy Meadow (theme 'sweet').
  * Teaches: move, jump, variable jump height, checkpoints, then introduces three troll traps
  * one at a time: Fake Floor, then Surprise Spikes (twice), then the Running Portal at the end.
  */
 export const level01: LevelData = {
   id: 1,
   name: 'Hello Mochi!',
+  theme: 'sweet',
   width: 136,
   height: 17,
   spawn: { x: 3, y: 14 },
@@ -45,6 +46,36 @@ export const level01: LevelData = {
     { x: 100, y: 14 },
   ],
   finish: { x: 130, y: 14 },
+  // Candy Meadow scenery: no collision, behind the platforms, kept at least a tile away from every
+  // hazard (pit 59-75, surprise spikes 83-88 and 123-127, spikes 107-110, portal run 127-136).
+  decor: [
+    { kind: 'prop', x: 1.4, y: 14, prop: 'lolliTree' },
+    { kind: 'prop', x: 6.5, y: 14, prop: 'sign' },
+    { kind: 'prop', x: 10.5, y: 14, prop: 'flowers' },
+    { kind: 'prop', x: 14.5, y: 14, prop: 'cottonTree' },
+    { kind: 'prop', x: 19.6, y: 14, prop: 'fence' },
+    { kind: 'prop', x: 27.2, y: 14, prop: 'bush' },
+    { kind: 'prop', x: 29.6, y: 14, prop: 'flowers', scale: 0.8 },
+    { kind: 'prop', x: 40.4, y: 14, prop: 'candyCane' },
+    { kind: 'prop', x: 45.2, y: 14, prop: 'lolliTree', scale: 0.85, flip: true },
+    { kind: 'prop', x: 51, y: 14, prop: 'cupcake' },
+    { kind: 'prop', x: 54.2, y: 14, prop: 'flowers' },
+    { kind: 'prop', x: 57.4, y: 14, prop: 'sign', scale: 0.9 },
+    { kind: 'prop', x: 79.6, y: 14, prop: 'cottonTree', scale: 0.9 },
+    { kind: 'prop', x: 91, y: 14, prop: 'flowers' },
+    { kind: 'prop', x: 93.4, y: 14, prop: 'bush', scale: 0.9 },
+    { kind: 'prop', x: 102.6, y: 14, prop: 'fence' },
+    { kind: 'prop', x: 113, y: 14, prop: 'cupcake' },
+    { kind: 'prop', x: 116.2, y: 14, prop: 'cottonTree' },
+    { kind: 'prop', x: 119.6, y: 14, prop: 'flowers', scale: 0.85 },
+    { kind: 'floater', x: 12, y: 7, prop: 'wrapped' },
+    { kind: 'floater', x: 30, y: 6, prop: 'starCandy' },
+    { kind: 'floater', x: 52.5, y: 6.5, prop: 'balloon', scale: 0.9 },
+    { kind: 'floater', x: 79, y: 7.5, prop: 'wrapped' },
+    { kind: 'floater', x: 97, y: 9, prop: 'starCandy' },
+    { kind: 'floater', x: 114.5, y: 6, prop: 'balloon', scale: 0.8 },
+    { kind: 'floater', x: 120.5, y: 8, prop: 'gumdrop' },
+  ],
   hints: [
     { x: 4, y: 14, teach: 'move', text: 'A / D  atau  ← →  untuk jalan', touchText: 'Tahan ◀ ▶ di kiri bawah untuk jalan' },
     { x: 17, y: 14, teach: 'jump', text: 'Space / ↑  untuk lompat', touchText: 'Tap sisi kanan layar untuk lompat' },

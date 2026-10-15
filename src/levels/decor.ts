@@ -1,15 +1,32 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
+import { sweetPropKey } from '../art/sweetTextures';
 import { textStyle } from '../ui/text';
 import type { DecorDef } from './types';
 
 /**
- * Builds Level 03's scenery: lying tutorial signs and the truth tells (mint sprouts on real
- * ground, tiny holes over sleeping spikes). Static images with no collision, drawn once.
+ * Builds level scenery: Level 03's lying signs and truth tells (mint sprouts on real ground, tiny
+ * holes over sleeping spikes) and Level 01's Candy Meadow props. Static images with no collision.
  */
 export function buildDecor(scene: Phaser.Scene, defs: DecorDef[]): void {
   for (const d of defs) {
     const groundY = d.y * TILE;
+    if (d.kind === 'prop') {
+      // Behind the platforms (depth 10): the base tucks under the frosting, hazards stay on top.
+      scene.add
+        .image(d.x * TILE, groundY + 6, sweetPropKey(d.prop))
+        .setOrigin(0.5, 1)
+        .setScale(d.scale ?? 1)
+        .setFlipX(!!d.flip)
+        .setDepth(9);
+      continue;
+    }
+    if (d.kind === 'floater') {
+      // Far behind the action (below the ambient sparkles), with a gentle deterministic bob.
+      const img = scene.add.image(d.x * TILE, groundY, sweetPropKey(d.prop)).setScale(d.scale ?? 1).setDepth(3).setAlpha(0.95);
+      scene.tweens.add({ targets: img, y: groundY - 7, angle: { from: -6, to: 6 }, duration: 1700 + ((d.x * 97) % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      continue;
+    }
     if (d.kind === 'sign') {
       const cx = d.x * TILE + TILE / 2;
       scene.add.image(cx, groundY + 2, 'sign_board').setOrigin(0.5, 1).setDepth(9);

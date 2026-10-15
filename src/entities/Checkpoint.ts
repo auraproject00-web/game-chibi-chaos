@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { themedKey } from '../art/textures';
 
 /** Flag that becomes the respawn point once touched. */
 export class Checkpoint {
@@ -11,7 +12,7 @@ export class Checkpoint {
     readonly x: number,
     readonly bottomY: number,
   ) {
-    this.sprite = scene.add.image(x, bottomY + 2, 'flag_off').setOrigin(0.26, 1).setDepth(12);
+    this.sprite = scene.add.image(x, bottomY + 2, themedKey(scene, 'flag_off')).setOrigin(0.26, 1).setDepth(12);
     // Tall trigger column so jumping over the flag still counts.
     this.area = new Phaser.Geom.Rectangle(x - 22, bottomY - 260, 48, 260);
   }
@@ -24,7 +25,7 @@ export class Checkpoint {
   activate(): boolean {
     if (this.activated) return false;
     this.activated = true;
-    this.sprite.setTexture('flag_on');
+    this.sprite.setTexture(themedKey(this.scene, 'flag_on'));
     this.scene.tweens.add({
       targets: this.sprite,
       scaleY: { from: 0.6, to: 1 },

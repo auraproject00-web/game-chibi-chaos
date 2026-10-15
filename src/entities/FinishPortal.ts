@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { themedKey } from '../art/textures';
 
 export interface PortalLook {
   /**
@@ -25,7 +26,8 @@ export class FinishPortal {
     const cy = bottomY - 46;
     this.center = new Phaser.Math.Vector2(x, cy);
     this.glow = scene.add.image(x, cy, 'glow').setDepth(11).setTint(look.decoy ? 0xffb3c1 : 0xcdb4ff).setScale(1.3);
-    this.portal = scene.add.image(x, cy, 'portal').setDepth(12);
+    // Decoys keep the default art: their tells are spin direction and glow color.
+    this.portal = scene.add.image(x, cy, look.decoy ? 'portal' : themedKey(scene, 'portal')).setDepth(12);
     this.startIdle(scene);
     this.area = new Phaser.Geom.Rectangle(x - 22, cy - 34, 44, 80);
   }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
+import { themedKey } from '../art/textures';
 import { AudioManager } from '../managers/AudioManager';
 
 export interface SpikeTrapOptions {
@@ -43,17 +44,18 @@ export class SpikeTrap {
     private readonly opts: SpikeTrapOptions,
   ) {
     const w = opts.tiles * TILE;
+    const tex = themedKey(scene, 'spike');
     this.revealed = !opts.hidden;
     if (opts.ceiling) {
       // Always visible; mirrored copy of floor spikes.
-      this.sprite = scene.add.tileSprite(opts.x, opts.surfaceY, w, SPIKE_H, 'spike').setOrigin(0, 0).setFlipY(true).setDepth(11);
+      this.sprite = scene.add.tileSprite(opts.x, opts.surfaceY, w, SPIKE_H, tex).setOrigin(0, 0).setFlipY(true).setDepth(11);
       this.hitArea = new Phaser.Geom.Rectangle(opts.x + 5, opts.surfaceY, w - 10, SPIKE_H - 6);
       return;
     }
     const startY = opts.hidden ? opts.surfaceY + SPIKE_H + 2 : opts.surfaceY;
     // Hidden spikes render behind the ground so they are concealed until they rise.
     this.sprite = scene.add
-      .tileSprite(opts.x, startY, w, SPIKE_H, 'spike')
+      .tileSprite(opts.x, startY, w, SPIKE_H, tex)
       .setOrigin(0, 1)
       .setDepth(opts.hidden ? 5 : 11);
     // Forgiving hitbox: inset from the sides and only the upper part of the spikes.

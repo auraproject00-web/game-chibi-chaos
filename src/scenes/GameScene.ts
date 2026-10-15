@@ -161,7 +161,7 @@ export class GameScene extends Phaser.Scene {
     const bg = this.scene.get('Background') as BackgroundScene;
     bg.setScrollSource(() => cam.worldView.x);
     bg.setTheme(level.theme ?? 'meadow');
-    if (level.theme === 'candy' || level.theme === 'illusion' || level.theme === 'dimension') this.ambient = new AmbientSparkles(this);
+    if (level.theme && level.theme !== 'meadow') this.ambient = new AmbientSparkles(this);
 
     // HUD on top. It reads the touch controls too.
     if (this.scene.isActive('UI')) this.scene.stop('UI');

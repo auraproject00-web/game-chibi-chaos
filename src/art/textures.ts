@@ -3,6 +3,7 @@ import { PALETTE, TILE, TONES } from '../config';
 import { generateMochiTextures } from './mochi';
 import { drawDimensionPlatform, generateDimensionTextures } from './dimensionTextures';
 import { generateIllusionTextures } from './illusionTextures';
+import { drawSweetPlatform } from './sweetTextures';
 import type { LevelTheme } from '../levels/types';
 
 /**
@@ -232,6 +233,16 @@ export function setPlatformTheme(theme: LevelTheme): void {
   platformTheme = theme;
 }
 
+/**
+ * Texture key for a hazard or object skin in the current level theme: `${base}_${theme}` when that
+ * theme has its own skin (Level 01's candy spikes, flag and portal), otherwise the default.
+ * Same size and anchor as the default, so gameplay never changes.
+ */
+export function themedKey(scene: Phaser.Scene, base: string): string {
+  const key = `${base}_${platformTheme}`;
+  return platformTheme !== 'meadow' && scene.textures.exists(key) ? key : base;
+}
+
 /** Pixels of padding around a baked platform texture (grass cap and flowers overhang the box). */
 export const PLATFORM_PAD = { x: 2, y: 3 } as const;
 
@@ -246,6 +257,7 @@ export function platformTexture(scene: Phaser.Scene, w: number, h: number, crack
     make(scene, key, w + PLATFORM_PAD.x * 2, h + PLATFORM_PAD.y, (g) => {
       g.translateCanvas(PLATFORM_PAD.x, PLATFORM_PAD.y);
       if (theme === 'candy') drawCandyPlatform(g, w, h, cracked);
+      else if (theme === 'sweet') drawSweetPlatform(g, w, h, cracked);
       else if (theme === 'illusion') drawIllusionPlatform(g, w, h, cracked);
       else if (theme === 'dimension') drawDimensionPlatform(g, w, h, cracked);
       else drawPlatform(g, w, h, cracked);

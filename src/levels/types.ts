@@ -1,3 +1,4 @@
+import type { SweetProp } from '../art/sweetTextures';
 import type { LevelLines } from '../managers/trollLines';
 import type { TrapConfigWithId } from '../traps/types';
 
@@ -41,7 +42,7 @@ export interface HintDef extends PointDef {
 }
 
 /** Visual theme: platform style, backdrop and ambient particles. Default 'meadow'. */
-export type LevelTheme = 'meadow' | 'candy' | 'illusion' | 'dimension';
+export type LevelTheme = 'meadow' | 'candy' | 'illusion' | 'dimension' | 'sweet';
 
 /**
  * Scenery with no collision (Level 03's lying signs and its truth tells). `y` is the ground row.
@@ -52,7 +53,13 @@ export type LevelTheme = 'meadow' | 'candy' | 'illusion' | 'dimension';
 export type DecorDef =
   | { kind: 'sign'; x: number; y: number; text: string }
   | { kind: 'sprouts'; x: number; y: number; w: number }
-  | { kind: 'holes'; x: number; y: number; w: number };
+  | { kind: 'holes'; x: number; y: number; w: number }
+  /**
+   * Candy Meadow (theme 'sweet') scenery, no collision. `prop` stands on ground row `y`, drawn
+   * behind the platforms so it can never cover a hazard; `floater` hovers at tile row `y` and bobs.
+   */
+  | { kind: 'prop'; x: number; y: number; prop: SweetProp; scale?: number; flip?: boolean }
+  | { kind: 'floater'; x: number; y: number; prop: SweetProp; scale?: number };
 
 export interface LevelData {
   id: number;

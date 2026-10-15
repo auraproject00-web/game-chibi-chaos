@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
 import { PLATFORM_PAD, platformTexture, setPlatformTheme } from '../art/textures';
+import { ensureSweetTextures } from '../art/sweetTextures';
 import { Checkpoint } from '../entities/Checkpoint';
 import { FinishPortal } from '../entities/FinishPortal';
 import { SpikeTrap } from '../traps/SpikeTrap';
@@ -29,6 +30,7 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
   const solids = scene.physics.add.staticGroup();
   // Platforms (and fake floors) baked below use this level's look.
   setPlatformTheme(data.theme ?? 'meadow');
+  if (data.theme === 'sweet') ensureSweetTextures(scene);
 
   for (const r of data.solids) {
     const x = r.x * TILE;
