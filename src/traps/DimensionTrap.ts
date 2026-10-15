@@ -21,6 +21,8 @@ interface DimSpike {
 
 /** Glitch dimension screen tint: light, so the world stays readable. */
 const GLITCH_OVERLAY = { color: 0x7f8cff, alpha: 0.1 };
+/** How late in the cooldown a press is remembered (ms); quicker double taps are still ignored. */
+const BUFFER_MS = 150;
 
 /**
  * Dimension Switch (Level 04, Zones 2, 4 and 5). Two dimensions share the level: Sweet and
@@ -43,6 +45,9 @@ export class DimensionTrap implements Trap {
   private savedDim: Dimension = 'sweet';
   private unlocked = false;
   private cooldown = 0;
+  /** A press in the last moments of the cooldown is kept and played when it ends. */
+  private buffered = 0;
+  private lastNope = false;
   private clock = 0;
   private switches = 0;
   private cancels = 0;
@@ -114,6 +119,13 @@ export class DimensionTrap implements Trap {
     const dt = Math.min(this.scene.game.loop.delta, 50);
     this.clock += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
+    if (this.buffered > 0) {
+      this.buffered -= dt;
+      if (this.cooldown <= 0) {
+        this.buffered = 0;
+        this.onAction(ctx);
+      }
+    }
     if (!this.unlocked && box.centerX >= this.cfg.unlock.x * TILE) this.unlock(ctx, true);
     for (const s of this.spikes) {
       if (s.dim === this.dim && s.spike.hits(box)) {
@@ -144,7 +156,12 @@ export class DimensionTrap implements Trap {
   }
 
   onAction(ctx: TrapContext): void {
-    if (!this.unlocked || this.cooldown > 0) return;
+    if (!this.unlocked) return;
+    if (this.cooldown > 0) {
+      // Late press (not a quick double tap, not after a "nope"): switch as soon as the cooldown ends.
+      if (!this.lastNope && this.cooldown <= BUFFER_MS) this.buffered = BUFFER_MS;
+      return;
+    }
     const next: Dimension = this.dim === 'sweet' ? 'glitch' : 'sweet';
     const box = ctx.player.bounds;
     // Never switch MOCHI into a block or onto spikes: cancel with a clear "nope" instead.
@@ -155,6 +172,7 @@ export class DimensionTrap implements Trap {
     if (blocked) {
       this.cancels++;
       this.cooldown = 180;
+      this.lastNope = true;
       AudioManager.play('dimNope');
       this.scene.tweens.killTweensOf(this.nope);
       this.nope.setVisible(true).setAlpha(1).setScale(0.6).setPosition(box.centerX, ctx.player.gravityDir > 0 ? box.top - 20 : box.bottom + 20);
@@ -163,6 +181,7 @@ export class DimensionTrap implements Trap {
       return;
     }
     this.dim = next;
+    this.lastNope = false;
     this.switches++;
     this.cooldown = this.cfg.cooldownMs;
     this.apply();
@@ -201,6 +220,7 @@ export class DimensionTrap implements Trap {
   onRespawn(): void {
     this.dim = this.savedDim;
     this.cooldown = 0;
+    this.buffered = 0;
     this.nope.setVisible(false);
     this.apply();
     if (this.unlocked) this.ctx?.setAction({ mode: this.dim });
