@@ -14,6 +14,8 @@ interface Plate {
   top: number;
   img: Phaser.GameObjects.Image;
   pressed: boolean;
+  /** Only the ghost can press it (Level 04 echo switch). */
+  echoOnly: boolean;
 }
 
 interface Gate {
@@ -99,7 +101,13 @@ export class GhostMochiTrap implements Trap {
         .setOrigin(0.5, 1)
         .setDisplaySize(p.w * TILE, 12)
         .setDepth(13);
-      return { left, right: left + p.w * TILE, top, img, pressed: false };
+      const echoOnly = !!p.echoOnly;
+      if (echoOnly) {
+        // Echo switch: ghost-tinted plate with a little ghost crystal behind it.
+        img.setTint(GHOST_TINT);
+        scene.add.image(left + (p.w * TILE) / 2, top - 6, 'ghost_shrine').setOrigin(0.5, 1).setScale(0.45).setAlpha(0.8).setDepth(12);
+      }
+      return { left, right: left + p.w * TILE, top, img, pressed: false, echoOnly };
     });
 
     this.gates = cfg.gates.map((g) => {
@@ -176,7 +184,7 @@ export class GhostMochiTrap implements Trap {
 
     for (let i = 0; i < this.plates.length; i++) {
       const p = this.plates[i];
-      const pressed = this.playerOn(p, box) || (this.ghostShown && this.footOn(p, this.ghostX, this.ghostFootY));
+      const pressed = (!p.echoOnly && this.playerOn(p, box)) || (this.ghostShown && this.footOn(p, this.ghostX, this.ghostFootY));
       if (pressed !== p.pressed) {
         p.pressed = pressed;
         p.img.setTexture(pressed ? 'plate_down' : 'plate_up');
@@ -267,7 +275,7 @@ export class GhostMochiTrap implements Trap {
   /** Will the plate go up within `warnMs`? Only the ghost can be predicted, so MOCHI on it = no. */
   private releasingSoon(plateIndex: number, box: Phaser.Geom.Rectangle): boolean {
     const p = this.plates[plateIndex];
-    if (!p.pressed || this.playerOn(p, box) || !this.ghostShown) return false;
+    if (!p.pressed || (!p.echoOnly && this.playerOn(p, box)) || !this.ghostShown) return false;
     const r = this.sampleAt(this.clock - this.cfg.delayMs + this.cfg.warnMs, this.read);
     if (r < 0) return false;
     const i = r % CAP;

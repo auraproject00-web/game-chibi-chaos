@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { LevelTheme } from '../levels/types';
 
-const CLOUD_TINT: Record<LevelTheme, number> = { meadow: 0xffffff, candy: 0xffe6f2, illusion: 0xf3ecff };
+const CLOUD_TINT: Record<LevelTheme, number> = { meadow: 0xffffff, candy: 0xffe6f2, illusion: 0xf3ecff, dimension: 0xffeef8 };
 
 /**
  * Parallax backdrop rendered beneath every other scene, unaffected by the game camera zoom.

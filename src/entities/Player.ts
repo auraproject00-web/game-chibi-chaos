@@ -49,6 +49,14 @@ export class Player {
   /** Simple stats the tutorial reads; they never feed back into movement. */
   jumpCount = 0;
   bestRise = 0;
+  /**
+   * Gravity direction: 1 = normal (down), -1 = inverted (MOCHI stands on ceilings). Only Level 04's
+   * gravity gates change it; with 1 every formula below is exactly the original one.
+   */
+  private gravDir: 1 | -1 = 1;
+  /** Visual flip (1 upright, -1 upside down), tweened when gravity changes. Visual only. */
+  flipScale = 1;
+  private flipTween: Phaser.Tweens.Tween | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -87,7 +95,40 @@ export class Player {
   }
 
   get onGround(): boolean {
+    if (this.gravDir < 0) return this.body.blocked.up || this.body.touching.up;
     return this.body.blocked.down || this.body.touching.down;
+  }
+
+  get gravityDir(): 1 | -1 {
+    return this.gravDir;
+  }
+
+  /** World y of MOCHI's feet (the bottom, or the top while gravity is inverted). */
+  get footY(): number {
+    return this.gravDir < 0 ? this.body.top : this.body.bottom;
+  }
+
+  /**
+   * Flips gravity (Level 04). Body gravity cancels the world's and pulls the other way with the
+   * same strength, so jump height and fall speed stay identical upside down. Speed toward the new
+   * "down" is kept small so the flip feels like a float, not a slam.
+   */
+  setGravityDir(dir: 1 | -1, animate = true): void {
+    if (dir === this.gravDir) return;
+    this.gravDir = dir;
+    this.body.setGravityY(dir < 0 ? -2 * PLAYER.gravity : 0);
+    this.body.setVelocityY(Phaser.Math.Clamp(this.body.velocity.y, -120, 120));
+    this.jumping = false;
+    this.coyoteMs = 0;
+    this.wasOnGround = false;
+    this.peakFallSpeed = 0;
+    this.flipTween?.remove();
+    this.flipTween = null;
+    if (animate) {
+      this.flipTween = this.scene.tweens.add({ targets: this, flipScale: dir, duration: 160, ease: 'Sine.easeInOut' });
+    } else {
+      this.flipScale = dir;
+    }
   }
 
   update(deltaMs: number, input: ControlFrame): void {
@@ -98,7 +139,8 @@ export class Player {
 
     // Landing.
     if (grounded && !this.wasOnGround) this.onLand();
-    if (!grounded) this.peakFallSpeed = Math.max(this.peakFallSpeed, body.velocity.y);
+    const dir = this.gravDir;
+    if (!grounded) this.peakFallSpeed = Math.max(this.peakFallSpeed, body.velocity.y * dir);
 
     // Coyote time and jump buffer.
     this.coyoteMs = grounded ? PLAYER.coyoteMs : this.coyoteMs - deltaMs;
@@ -119,7 +161,7 @@ export class Player {
 
     // Jump.
     if (this.jumpBufferMs > 0 && this.coyoteMs > 0) {
-      body.setVelocityY(-PLAYER.jumpVelocity);
+      body.setVelocityY(-PLAYER.jumpVelocity * dir);
       this.jumpBufferMs = 0;
       this.coyoteMs = 0;
       this.jumping = true;
@@ -127,11 +169,11 @@ export class Player {
     }
 
     // Variable jump height: releasing early cuts the ascent.
-    if (this.jumping && !input.jumpHeld && body.velocity.y < 0) {
+    if (this.jumping && !input.jumpHeld && body.velocity.y * dir < 0) {
       body.setVelocityY(body.velocity.y * PLAYER.jumpCut);
       this.jumping = false;
     }
-    if (body.velocity.y >= 0) this.jumping = false;
+    if (body.velocity.y * dir >= 0) this.jumping = false;
 
     if (grounded) this.runDistance += Math.abs(vx) * dt;
     this.wasOnGround = grounded;
@@ -141,7 +183,7 @@ export class Player {
     this.kick(0.72, 1.32);
     this.jumpCount += 1;
     this.jumpStartY = this.body.bottom;
-    this.fx.dust(this.body.center.x, this.body.bottom, 5);
+    this.fx.dust(this.body.center.x, this.footY, 5);
     AudioManager.play('jump');
   }
 
@@ -149,7 +191,7 @@ export class Player {
     const impact = Phaser.Math.Clamp(this.peakFallSpeed / PLAYER.maxFall, 0.25, 1);
     this.kick(1 + 0.38 * impact, 1 - 0.32 * impact);
     if (this.peakFallSpeed > 250) {
-      this.fx.dust(this.body.center.x, this.body.bottom, Math.round(4 + 6 * impact));
+      this.fx.dust(this.body.center.x, this.footY, Math.round(4 + 6 * impact));
       AudioManager.play('land');
     }
     this.peakFallSpeed = 0;
@@ -170,7 +212,8 @@ export class Player {
     const body = this.body;
     const grounded = this.onGround;
 
-    if (!grounded) this.bestRise = Math.max(this.bestRise, this.jumpStartY - body.bottom);
+    if (!grounded && this.gravDir > 0) this.bestRise = Math.max(this.bestRise, this.jumpStartY - body.bottom);
+    const vy = body.velocity.y * this.gravDir;
 
     // Damped spring back to a round shape: overshoot gives the jelly wobble.
     this.squashVX += (-(this.squashX - 1) * JELLY_STIFFNESS - this.squashVX * JELLY_DAMPING) * dt;
@@ -192,11 +235,11 @@ export class Player {
       if (!grounded) this.idleTime = 0;
     } else if (!grounded) {
       this.idleTime = 0;
-      if (body.velocity.y < 0) {
+      if (vy < 0) {
         frame = 'jump';
         // Stretch a little while rising fast.
-        shapeY = 1 + Math.min(0.08, -body.velocity.y / 8000);
-      } else if (body.velocity.y > PANIC_FALL_SPEED) {
+        shapeY = 1 + Math.min(0.08, -vy / 8000);
+      } else if (vy > PANIC_FALL_SPEED) {
         frame = 'panic';
         jitter = Math.sin(time / 22) * 1.2;
       } else {
@@ -227,12 +270,14 @@ export class Player {
     }
 
     const sx = BASE_SCALE * this.popScale * this.squashX * shapeX;
-    const sy = BASE_SCALE * this.popScale * this.squashY * shapeY;
+    const sy = BASE_SCALE * this.popScale * this.squashY * shapeY * this.flipScale;
     this.sprite.setTexture(mochiKey(frame));
     this.sprite.setFlipX(this.facing < 0);
-    this.sprite.setPosition(body.center.x + jitter, body.bottom - bob - this.hopY);
+    // Upside down, the feet (sprite origin) sit on the hitbox top and the art is mirrored around them.
+    const lift = (bob + this.hopY) * this.gravDir;
+    this.sprite.setPosition(body.center.x + jitter, (this.gravDir < 0 ? body.top : body.bottom) - lift);
     this.sprite.setScale(sx, sy);
-    this.sprite.setRotation((body.velocity.x / PLAYER.maxSpeed) * 0.07);
+    this.sprite.setRotation((body.velocity.x / PLAYER.maxSpeed) * 0.07 * this.gravDir);
   }
 
   /** Shows a reaction face for `ms` with a little jelly kick. Never touches the hitbox. */
@@ -275,6 +320,10 @@ export class Player {
   }
 
   respawn(x: number, bottomY: number): void {
+    // Every respawn point stands on normal ground: gravity is always normal again.
+    if (this.gravDir !== 1) this.setGravityDir(1, false);
+    this.flipTween = null;
+    this.flipScale = 1;
     this.scene.tweens.killTweensOf(this.sprite);
     this.scene.tweens.killTweensOf(this);
     this.body.enable = true;

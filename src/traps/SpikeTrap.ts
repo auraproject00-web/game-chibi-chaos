@@ -21,6 +21,8 @@ export interface SpikeTrapOptions {
    * before the spikes shoot up and become deadly. 0 (default) pops them at once.
    */
   warnMs?: number;
+  /** Hanging from a ceiling (Level 04): `surfaceY` is the ceiling's underside, tips point down. */
+  ceiling?: boolean;
 }
 
 const SPIKE_H = 24;
@@ -42,6 +44,12 @@ export class SpikeTrap {
   ) {
     const w = opts.tiles * TILE;
     this.revealed = !opts.hidden;
+    if (opts.ceiling) {
+      // Always visible; mirrored copy of floor spikes.
+      this.sprite = scene.add.tileSprite(opts.x, opts.surfaceY, w, SPIKE_H, 'spike').setOrigin(0, 0).setFlipY(true).setDepth(11);
+      this.hitArea = new Phaser.Geom.Rectangle(opts.x + 5, opts.surfaceY, w - 10, SPIKE_H - 6);
+      return;
+    }
     const startY = opts.hidden ? opts.surfaceY + SPIKE_H + 2 : opts.surfaceY;
     // Hidden spikes render behind the ground so they are concealed until they rise.
     this.sprite = scene.add
@@ -112,6 +120,11 @@ export class SpikeTrap {
     this.warning = false;
     this.revealed = false;
     this.sprite.setY(this.opts.surfaceY + SPIKE_H + 2).setDepth(5);
+  }
+
+  /** Fades the spikes (a hazard from the other dimension is shown faint). Visual only. */
+  setAlpha(alpha: number): void {
+    this.sprite.setAlpha(alpha);
   }
 
   hits(player: Phaser.Geom.Rectangle): boolean {

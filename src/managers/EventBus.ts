@@ -15,6 +15,8 @@ export const GameEvents = {
   TrapSprung: 'trap-sprung',
   /** The troll narrator wants to say something. */
   NarratorSay: 'narrator-say',
+  /** The level's action button changed (Level 04 dimension switch). Payload: ActionInfo | null. */
+  ActionState: 'action-state',
 } as const;
 
 /** Everything known about one death. Cause and trap come from the real gameplay event. */

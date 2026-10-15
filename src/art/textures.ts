@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE, TILE, TONES } from '../config';
 import { generateMochiTextures } from './mochi';
+import { drawDimensionPlatform, generateDimensionTextures } from './dimensionTextures';
 import { generateIllusionTextures } from './illusionTextures';
 import type { LevelTheme } from '../levels/types';
 
@@ -246,6 +247,7 @@ export function platformTexture(scene: Phaser.Scene, w: number, h: number, crack
       g.translateCanvas(PLATFORM_PAD.x, PLATFORM_PAD.y);
       if (theme === 'candy') drawCandyPlatform(g, w, h, cracked);
       else if (theme === 'illusion') drawIllusionPlatform(g, w, h, cracked);
+      else if (theme === 'dimension') drawDimensionPlatform(g, w, h, cracked);
       else drawPlatform(g, w, h, cracked);
     });
   }
@@ -638,6 +640,7 @@ export function generateTextures(scene: Phaser.Scene): void {
 
   generateBackgroundTextures(scene);
   generateIllusionTextures(scene);
+  generateDimensionTextures(scene);
 }
 
 function generateBackgroundTextures(scene: Phaser.Scene): void {

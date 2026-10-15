@@ -25,7 +25,11 @@ export type TrapConfig =
   | MirrorPanelConfig
   | GhostMochiConfig
   | RealityShiftConfig
-  | LieDoorConfig;
+  | LieDoorConfig
+  | GravityFlipConfig
+  | DimensionConfig
+  | ChaosChaseConfig
+  | RealityCollapseConfig;
 
 export type TrapType = TrapConfig['type'];
 
@@ -202,7 +206,8 @@ export interface GhostMochiConfig {
   delayMs: number;
   /** Crystal at the start of the zone (ground row). */
   shrine: { x: number; y: number };
-  plates: { x: number; y: number; w: number }[];
+  /** `echoOnly` plates (Level 04 Time Echo) ignore MOCHI: only the ghost can press them. */
+  plates: { x: number; y: number; w: number; echoOnly?: boolean }[];
   /** A light gate standing on row `y`, `h` tiles tall, opened by plate index `plate`. */
   gates: { x: number; y: number; h: number; plate: number }[];
   /** A crystal bridge with its top at row `y`, solid while plate index `plate` is pressed. */
@@ -249,6 +254,70 @@ export interface LieDoorConfig {
   warpTo?: { x: number; y: number };
 }
 
+/**
+ * 17. Gravity gates (Level 04). Crossing a gate's column sets MOCHI's gravity to the gate's
+ * `right` direction when moving right, and to the opposite when moving left, so walking back
+ * always undoes it. A gate glows and an icon pops over MOCHI just before a flip. `spikes` hang
+ * from ceilings (or stand on floors) in the gravity area; deaths on them count for this trap.
+ * Gravity is always normal again on respawn.
+ */
+export interface GravityFlipConfig {
+  type: 'gravityFlip';
+  gates: { x: number; top: number; bottom: number; right: 'up' | 'down' }[];
+  spikes?: { x: number; y: number; w: number; ceiling?: boolean }[];
+  /** How close (tiles) MOCHI must be for the warning to show. */
+  warnTiles: number;
+}
+
+export type Dimension = 'sweet' | 'glitch';
+
+/**
+ * 18. Dimension Switch (Level 04). Touching the crystal at `unlock` enables the action button.
+ * Each press swaps Sweet <-> Glitch (after `cooldownMs`): blocks and spikes of the active
+ * dimension are real, the others are faint outlines. A switch that would put MOCHI inside a
+ * block or on spikes is cancelled with a "nope". The dimension is saved at each checkpoint and
+ * restored on respawn.
+ */
+export interface DimensionConfig {
+  type: 'dimension';
+  unlock: { x: number; y: number };
+  cooldownMs: number;
+  /** Blocks with their top at row `y`. `h` in tiles; leave out for a thin slab. */
+  blocks: { x: number; y: number; w: number; h?: number; dim: Dimension }[];
+  spikes?: { x: number; y: number; w: number; dim: Dimension; ceiling?: boolean }[];
+}
+
+/**
+ * 19. Chaos Chase (Level 04). When MOCHI's center passes `triggerX`, a chaos wave appears at
+ * `startX` (warning for `warnMs`: rumble, siren, icon), then sweeps right at a fixed
+ * `speedRatio` of MOCHI's top speed until `endX`, where it dissolves. Touching it is a death.
+ * It resets on respawn. Never random: same start, same speed, every try.
+ */
+export interface ChaosChaseConfig {
+  type: 'chaosChase';
+  triggerX: number;
+  startX: number;
+  endX: number;
+  speedRatio: number;
+  warnMs: number;
+}
+
+/**
+ * 20. Reality Collapse (Level 04). Story beats: when MOCHI passes `triggerX` the world cracks
+ * (rumble, light crack overlay, narrator); passing `finishX` makes the narrator react to the
+ * finish. Purely presentational: it never kills.
+ */
+export interface RealityCollapseConfig {
+  type: 'realityCollapse';
+  triggerX: number;
+  finishX: number;
+}
+
+/** State of the level's action button (null when the level has none yet). */
+export interface ActionInfo {
+  mode: Dimension;
+}
+
 /** What a trap may touch in the running game. */
 export interface TrapContext {
   readonly scene: Phaser.Scene;
@@ -269,6 +338,8 @@ export interface TrapContext {
    * The narrator may comment. `key` picks the line set (defaults to the trap type).
    */
   sprung(source: Trap, key?: string): void;
+  /** Shows, updates or hides the HUD action button (Level 04 dimension switch). */
+  setAction(info: ActionInfo | null): void;
 }
 
 export interface Trap {
@@ -289,6 +360,10 @@ export interface Trap {
   onContact?(ctx: TrapContext): void;
   /** Called when MOCHI respawns. Traps that should be retried go back to their start state. */
   onRespawn?(): void;
+  /** Called when MOCHI activates a checkpoint (save what respawn should restore). */
+  onCheckpoint?(): void;
+  /** Called when the action button/key is pressed. */
+  onAction?(ctx: TrapContext): void;
 }
 
 /** Collision bodies point back at their trap through this data key. */

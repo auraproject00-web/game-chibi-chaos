@@ -41,7 +41,7 @@ export interface HintDef extends PointDef {
 }
 
 /** Visual theme: platform style, backdrop and ambient particles. Default 'meadow'. */
-export type LevelTheme = 'meadow' | 'candy' | 'illusion';
+export type LevelTheme = 'meadow' | 'candy' | 'illusion' | 'dimension';
 
 /**
  * Scenery with no collision (Level 03's lying signs and its truth tells). `y` is the ground row.

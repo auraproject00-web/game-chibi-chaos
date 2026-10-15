@@ -31,7 +31,13 @@ export type SfxName =
   | 'shiftWarn'
   | 'shift'
   | 'fakeDoor'
-  | 'trueDoor';
+  | 'trueDoor'
+  | 'gravity'
+  | 'dimension'
+  | 'dimNope'
+  | 'chaseWarn'
+  | 'chase'
+  | 'collapse';
 
 /** The same sound is skipped if it was played less than this many ms ago. */
 export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
@@ -58,6 +64,12 @@ export const MIN_GAP_MS: Partial<Record<SfxName, number>> = {
   shift: 300,
   fakeDoor: 400,
   trueDoor: 1500,
+  gravity: 250,
+  dimension: 150,
+  dimNope: 200,
+  chaseWarn: 1500,
+  chase: 1500,
+  collapse: 1500,
 };
 export const DEFAULT_MIN_GAP_MS = 50;
 
@@ -189,6 +201,41 @@ export function playRecipe(s: Synth, name: SfxName, t: number): number {
       [659.25, 830.61, 987.77, 1318.5].forEach((f, i) => s.tone('triangle', f, f, t + i * 0.06, 0.2, 0.07));
       s.tone('sine', 1975.5, 1975.5, t + 0.26, 0.4, 0.035);
       return 0.68;
+    case 'gravity':
+      // Gravity flips: a floaty "bwoop" that bends up then settles.
+      s.tone('sine', 280, 760, t, 0.18, 0.08);
+      s.tone('triangle', 760, 520, t + 0.16, 0.14, 0.04);
+      s.wobble(t + 0.05, 1200, 1500, 0.2, 0.02, 14);
+      return 0.32;
+    case 'dimension':
+      // Dimension switch: a bright glassy swap with a tiny bitcrush blip.
+      s.tone('triangle', 880, 1320, t, 0.08, 0.07);
+      s.tone('square', 660, 440, t + 0.06, 0.07, 0.03);
+      s.tone('sine', 1760, 1760, t + 0.1, 0.12, 0.035);
+      return 0.24;
+    case 'dimNope':
+      // Switch cancelled: soft double "nuh-uh".
+      s.tone('square', 262, 247, t, 0.07, 0.045);
+      s.tone('square', 208, 196, t + 0.1, 0.1, 0.045);
+      return 0.22;
+    case 'chaseWarn':
+      // The chaos wave wakes up: two-tone siren over a low rumble.
+      s.tone('triangle', 660, 880, t, 0.2, 0.06);
+      s.tone('triangle', 660, 880, t + 0.32, 0.2, 0.06);
+      s.tone('triangle', 660, 880, t + 0.64, 0.2, 0.06);
+      s.burst(t, 0.9, 260, 0.08, 'lowpass');
+      return 0.95;
+    case 'chase':
+      // The wave starts moving: a deep whoosh.
+      s.tone('sawtooth', 110, 55, t, 0.45, 0.05);
+      s.burst(t, 0.5, 700, 0.07, 'lowpass');
+      return 0.52;
+    case 'collapse':
+      // Reality cracks: glass crunch over a falling rumble.
+      [3136, 2349, 2794, 1975].forEach((f, i) => s.tone('sine', f, f * 0.9, t + i * 0.05, 0.14, 0.03));
+      s.burst(t, 0.6, 400, 0.09, 'lowpass');
+      s.tone('sine', 160, 60, t + 0.05, 0.6, 0.07);
+      return 0.7;
     case 'narSavage':
       // Savage: dramatic "wah-wah" with a wobbly ending.
       s.tone('triangle', 392, 370, t, 0.16, 0.1);
