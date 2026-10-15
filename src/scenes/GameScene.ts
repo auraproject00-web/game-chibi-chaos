@@ -21,7 +21,7 @@ import { InputManager, type ControlFrame } from '../managers/InputManager';
 import { SaveManager } from '../managers/SaveManager';
 import { TrollPersonalityManager } from '../managers/TrollPersonalityManager';
 import { TutorialManager } from '../managers/TutorialManager';
-import { TRAP_DATA_KEY, type Trap, type TrapContext } from '../traps/types';
+import { TRAP_DATA_KEY, type ActionInfo, type Trap, type TrapContext } from '../traps/types';
 import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
 
@@ -63,6 +63,8 @@ export class GameScene extends Phaser.Scene {
   private gameMs = 0;
   /** Traps MOCHI was in front of during this life; passing one emits TrapPassed. */
   private approached = new Set<Trap>();
+  /** The level's action button (Level 04), or null when there is none. Read by the HUD. */
+  private action: ActionInfo | null = null;
 
   constructor() {
     super('Game');
@@ -81,6 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.lastTriggered = null;
     this.gameMs = 0;
     this.approached = new Set();
+    this.action = null;
   }
 
   get levelInfo(): { id: number; name: string } {
@@ -89,6 +92,10 @@ export class GameScene extends Phaser.Scene {
 
   get deathCount(): number {
     return this.deaths;
+  }
+
+  get actionInfo(): ActionInfo | null {
+    return this.action;
   }
 
   create(): void {
@@ -132,6 +139,10 @@ export class GameScene extends Phaser.Scene {
         const payload: TrapSprungPayload = { trapId: source.id, trapType: source.type, key: key ?? source.type };
         EventBus.emit(GameEvents.TrapSprung, payload);
       },
+      setAction: (info) => {
+        this.action = info;
+        EventBus.emit(GameEvents.ActionState, info);
+      },
     };
     this.world.traps.forEach((t) => t.init?.(this.trapCtx));
     this.dizzyIcon = this.add.image(0, 0, 'swirl').setDepth(22).setScale(0.6).setVisible(false);
@@ -150,7 +161,7 @@ export class GameScene extends Phaser.Scene {
     const bg = this.scene.get('Background') as BackgroundScene;
     bg.setScrollSource(() => cam.worldView.x);
     bg.setTheme(level.theme ?? 'meadow');
-    if (level.theme === 'candy' || level.theme === 'illusion') this.ambient = new AmbientSparkles(this);
+    if (level.theme === 'candy' || level.theme === 'illusion' || level.theme === 'dimension') this.ambient = new AmbientSparkles(this);
 
     // HUD on top. It reads the touch controls too.
     if (this.scene.isActive('UI')) this.scene.stop('UI');
@@ -233,6 +244,7 @@ export class GameScene extends Phaser.Scene {
     const input = this.controls.read();
     const noInput = input.moveX === 0 && !input.jumpHeld;
     if (this.reversedMs > 0) input.moveX = (input.moveX === 0 ? 0 : -input.moveX) as ControlFrame['moveX'];
+    if (input.actionPressed) this.world.traps.forEach((t) => t.onAction?.(this.trapCtx));
     this.player.update(dt, input);
     this.updateDizzy(dt);
 
@@ -255,11 +267,17 @@ export class GameScene extends Phaser.Scene {
       this.killPlayer('fall');
       return;
     }
+    // Upside down (Level 04 gravity), the sky is a pit too.
+    if (this.player.gravityDir < 0 && box.bottom < -40) {
+      this.killPlayer('fall');
+      return;
+    }
 
     for (const cp of this.world.checkpoints) {
       if (!cp.isActive && Phaser.Geom.Intersects.RectangleToRectangle(box, cp.area)) {
         cp.activate();
         this.respawnPoint = { x: cp.x, y: cp.bottomY };
+        this.world.traps.forEach((t) => t.onCheckpoint?.());
         AudioManager.play('checkpoint');
         this.tutorial.onCheckpoint();
         this.fx.sparkle(cp.x + 10, cp.bottomY - 50);
@@ -280,7 +298,7 @@ export class GameScene extends Phaser.Scene {
     // Look-ahead follow offset.
     const target = -this.player.facingDir * 70;
     this.lookAhead += (target - this.lookAhead) * Math.min(1, dt / 400);
-    this.cameras.main.setFollowOffset(this.lookAhead, 20);
+    this.cameras.main.setFollowOffset(this.lookAhead, 20 * this.player.gravityDir);
   }
 
   /** Emits TrapPassed once when MOCHI gets past a trap it was in front of during this life. */

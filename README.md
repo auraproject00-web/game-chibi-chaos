@@ -26,8 +26,9 @@ npm run preview  # serve the production build locally
 | Jump | Space, W or ↑ (hold longer = higher) | Tap anywhere on the right side (hold = higher) |
 | Pause | Esc or P, or the pause button | Pause button |
 | Restart | R or the restart button | Restart button |
+| Action (Level 04: switch dimension) | X, K or Shift | The ✦ button left of the jump pad (appears after the dimension crystal) |
 
-Multi-touch is supported: keep one thumb on the move zone and tap jump with the other.
+Multi-touch is supported: keep one thumb on the move zone and tap jump (or ✦) with the other.
 
 ## Project structure
 
@@ -76,6 +77,12 @@ Traps are plain config objects in a level's `traps` array (types in `src/traps/t
 | `ghostMochi` | In a zone, a ghost replays MOCHI's moves `delayMs` later and presses plates; a plate holds a gate open or a bridge solid; closing ones blink first | Stand on the plate long enough, then go |
 | `realityShift` | Crystal platforms in two phases turn SOLID/PHANTOM on one fixed clock (restarts on respawn); vanishing ones blink, appearing ones fill in, lamps show the rhythm | Jump when the next one lights up |
 | `lieDoor` | Labelled door: `trap` stands on illusion floor, `warp` sends MOCHI back to `warpTo` (no death), `true` hides the real portal and opens when MOCHI is near | Trust the tells, not the labels |
+| `gravityFlip` | Gates set MOCHI's own gravity (up/down) for the side MOCHI is on; walking back undoes it. A gate glows and an icon pops over MOCHI just before a flip. Optional hanging spikes. Gravity is normal again on respawn | Read the arrows, mind gaps in the ceiling |
+| `dimension` | After the crystal, the action button swaps Sweet/Glitch: only the active dimension's blocks and spikes are real, the others are dashed outlines. A switch into a block or onto spikes is cancelled ("nope"). Saved per checkpoint | Switch in mid-air, never on the block you stand on |
+| `chaosChase` | Past `triggerX` a chaos wave warns (siren, rumble, icon) then sweeps right at `speedRatio` × MOCHI's top speed until `endX`. Resets on respawn | Don't stop |
+| `realityCollapse` | Story beats: screen cracks + narrator at `triggerX`, a finish line at `finishX`. Never kills | – |
+
+`ghostMochi` plates can be `echoOnly` (Level 04 echo switches): MOCHI can't press them, only the ghost.
 
 Example: `{ type: 'baitCoin', x: 32, y: 11, spikes: { x: 31, y: 14, w: 3 } }`.
 Use only a few trap types per level and introduce them one at a time. Every trap fires at the same
@@ -103,6 +110,14 @@ to jump straight into level N (dev only, ignores locks); add `&cp=M` to start at
    a fixed cycle) and The Final Lie (three labelled doors: an illusion, a warp back, and the real
    finish). Signs and labels are level scenery (`decor` in the level data). Tuning is in `L3` at the
    top of `src/levels/level03.ts`.
+4. **Chaos Dimension** (Cute Pastel + Surreal Dimension, Nightmare 9/10, unlocked by finishing Level
+   3): Gravity Betrayal (gates put MOCHI on the ceiling; gaps in the ceiling are pits into the sky),
+   Dimension Switch (Sweet/Glitch blocks and spikes, with the new action button), Time Echo (the
+   Level 03 ghost, now with echo switches only the ghost can press), Chaos Chase (a wave at 92% of
+   MOCHI's speed) and Reality Collapse (all of it, one section at a time, up to crumbling ground and
+   the real portal). The level is one screen tall so floor and ceiling are always in view. Gravity
+   flipping only changes MOCHI's own body gravity (`Player.setGravityDir`), never the world's, and is
+   reset on respawn and on leaving the level. Tuning is in `L4` at the top of `src/levels/level04.ts`.
 
 ## Death reactions
 
@@ -149,7 +164,8 @@ Everything is synthesized with the Web Audio API, so there are no audio files or
   suspended while the tab is hidden and closed when the game is destroyed. Pause and Level Clear
   lower the music.
 - `src/audio/sfx.ts`: sound recipes (jump, land, death, respawn, spike, fake floor, checkpoint,
-  level complete, click, narrator popup per Troll Intensity, …).
+  level complete, click, narrator popup per Troll Intensity, gravity flip, dimension switch and
+  "nope", chase siren and whoosh, reality collapse, …).
 - `src/audio/music.ts`: two original loops (menu 100 BPM, gameplay 128 BPM) written as note data and
   played by synthesized marimba, xylophone, bass and light percussion. Each is rendered once with an
   OfflineAudioContext and played as one looping buffer, so the loop is seamless and nothing is

@@ -1,4 +1,8 @@
 import { BaitCoinTrap } from './BaitCoinTrap';
+import { ChaosChaseTrap } from './ChaosChaseTrap';
+import { DimensionTrap } from './DimensionTrap';
+import { GravityFlipTrap } from './GravityFlipTrap';
+import { RealityCollapseTrap } from './RealityCollapseTrap';
 import { DecoyPortalTrap } from './DecoyPortalTrap';
 import { FakeCheckpointTrap } from './FakeCheckpointTrap';
 import { FakeFinishTrap } from './FakeFinishTrap';
@@ -57,5 +61,13 @@ function build(scene: Phaser.Scene, cfg: TrapConfig): Trap {
       return new RealityShiftTrap(scene, cfg);
     case 'lieDoor':
       return new LieDoorTrap(scene, cfg);
+    case 'gravityFlip':
+      return new GravityFlipTrap(scene, cfg);
+    case 'dimension':
+      return new DimensionTrap(scene, cfg);
+    case 'chaosChase':
+      return new ChaosChaseTrap(scene, cfg);
+    case 'realityCollapse':
+      return new RealityCollapseTrap(scene, cfg);
   }
 }

@@ -5,6 +5,8 @@ export interface ControlFrame {
   moveX: -1 | 0 | 1;
   jumpHeld: boolean;
   jumpPressed: boolean;
+  /** The level's action (Level 04: switch dimension) was pressed this frame. */
+  actionPressed: boolean;
 }
 
 export type TouchRole = 'left' | 'right' | 'jump';
@@ -26,9 +28,10 @@ export interface TouchLayout {
  * can keep walking while jumping with the other thumb.
  */
 export class InputManager {
-  private readonly keys: Record<'left' | 'right' | 'a' | 'd' | 'up' | 'w' | 'space', Phaser.Input.Keyboard.Key> | null;
+  private readonly keys: Record<'left' | 'right' | 'a' | 'd' | 'up' | 'w' | 'space' | 'x' | 'k' | 'shift', Phaser.Input.Keyboard.Key> | null;
   private readonly touches = new Map<number, TouchRole>();
   private jumpQueued = false;
+  private actionQueued = false;
   private touchScene: Phaser.Scene | null = null;
   private layout: TouchLayout = { splitX: 120, moveZoneEnd: 300 };
   enabled = true;
@@ -45,6 +48,9 @@ export class InputManager {
         up: kb.addKey(K.UP),
         w: kb.addKey(K.W),
         space: kb.addKey(K.SPACE),
+        x: kb.addKey(K.X),
+        k: kb.addKey(K.K),
+        shift: kb.addKey(K.SHIFT),
       };
       const queue = (): void => {
         if (this.enabled) this.jumpQueued = true;
@@ -52,9 +58,18 @@ export class InputManager {
       this.keys.up.on('down', queue);
       this.keys.w.on('down', queue);
       this.keys.space.on('down', queue);
+      const action = (): void => this.queueAction();
+      this.keys.x.on('down', action);
+      this.keys.k.on('down', action);
+      this.keys.shift.on('down', action);
     } else {
       this.keys = null;
     }
+  }
+
+  /** Action button (touch HUD) or action key: consumed by the next read(). */
+  queueAction(): void {
+    if (this.enabled) this.actionQueued = true;
   }
 
   /** Touch is read from the HUD scene, which sits on top and knows which taps hit buttons. */
@@ -128,16 +143,19 @@ export class InputManager {
     const right = roles.has('right') || (!!k && (k.right.isDown || k.d.isDown));
     const jumpHeld = roles.has('jump') || (!!k && (k.space.isDown || k.up.isDown || k.w.isDown));
     const jumpPressed = this.jumpQueued;
+    const actionPressed = this.actionQueued;
     this.jumpQueued = false;
+    this.actionQueued = false;
     const moveX: -1 | 0 | 1 = left === right ? 0 : left ? -1 : 1;
-    if (!this.enabled) return { moveX: 0, jumpHeld: false, jumpPressed: false };
-    return { moveX, jumpHeld, jumpPressed };
+    if (!this.enabled) return { moveX: 0, jumpHeld: false, jumpPressed: false, actionPressed: false };
+    return { moveX, jumpHeld, jumpPressed, actionPressed };
   }
 
   /** Clears every held input. Called on pause, blur, resume and respawn-sensitive moments. */
   reset(): void {
     this.touches.clear();
     this.jumpQueued = false;
+    this.actionQueued = false;
     if (this.keys) Object.values(this.keys).forEach((key) => key.reset());
   }
 

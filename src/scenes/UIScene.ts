@@ -3,6 +3,8 @@ import { PALETTE, TONES } from '../config';
 import { AudioManager } from '../managers/AudioManager';
 import { EventBus, GameEvents, type DeathReactionPayload, type LevelCompletePayload, type NarratorLine } from '../managers/EventBus';
 import type { TouchRole } from '../managers/InputManager';
+import type { ActionInfo } from '../traps/types';
+import { DIM_TINT } from '../art/dimensionTextures';
 import { PROFILES } from '../managers/TrollIntensity';
 import { IconButton } from '../ui/Button';
 import { Overlay } from '../ui/Overlay';
@@ -30,6 +32,10 @@ interface BubbleRequest {
 /** A plain death message right after another bubble is skipped, so rapid deaths don't flicker popups. */
 const DEATH_MIN_GAP_MS = 1100;
 const PILL_H = 30;
+/** Action button radius (unscaled). Big enough for a thumb, apart from the jump pad. */
+const ACTION_R = 34;
+/** The action tutorial shows until the player has used the button once (per session). */
+let actionTaught = false;
 
 /**
  * Minimal in-game HUD: pause, level label, death counter, restart, touch pads and modal menus.
@@ -58,6 +64,10 @@ export class UIScene extends Phaser.Scene {
   private toastShownAt = -Infinity;
   private isTouch = false;
   private u = 1;
+  private actionBtn: Phaser.GameObjects.Container | null = null;
+  private actionRing: Phaser.GameObjects.Graphics | null = null;
+  private actionTip: Phaser.GameObjects.Container | null = null;
+  private actionMode: ActionInfo['mode'] | null = null;
 
   constructor() {
     super('UI');
@@ -70,6 +80,10 @@ export class UIScene extends Phaser.Scene {
     this.toastPriority = 0;
     this.touchHints = {};
     this.isTouch = this.sys.game.device.input.touch;
+    this.actionBtn = null;
+    this.actionRing = null;
+    this.actionTip = null;
+    this.actionMode = null;
 
     this.pauseBtn = new IconButton(this, 0, 0, 'icon_pause', () => this.game_.pauseGame(), HUD_BUTTON, PALETTE.lavender);
     this.restartBtn = new IconButton(this, 0, 0, 'icon_restart', () => this.game_.restartLevel(), HUD_BUTTON, 0x8fcbff);
@@ -108,6 +122,7 @@ export class UIScene extends Phaser.Scene {
     EventBus.on(GameEvents.LevelComplete, this.showComplete, this);
     EventBus.on(GameEvents.DeathReaction, this.showDeathReaction, this);
     EventBus.on(GameEvents.NarratorSay, this.showNarrator, this);
+    EventBus.on(GameEvents.ActionState, this.onActionState, this);
     if (import.meta.env.DEV) {
       // Loaded on demand and dropped from production builds entirely.
       void import('../ui/DebugTools').then((m) => {
@@ -121,11 +136,13 @@ export class UIScene extends Phaser.Scene {
       EventBus.off(GameEvents.LevelComplete, this.showComplete, this);
       EventBus.off(GameEvents.DeathReaction, this.showDeathReaction, this);
       EventBus.off(GameEvents.NarratorSay, this.showNarrator, this);
+      EventBus.off(GameEvents.ActionState, this.onActionState, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.game_.controls?.detachTouch();
     });
 
     this.layout();
+    this.onActionState(this.game_.actionInfo);
 
     // Started while held in portrait: wait paused until the phone is rotated.
     if (isPortraitTouch(this.scale.width, this.scale.height, this.isTouch)) this.game_.pauseGame();
@@ -220,7 +237,111 @@ export class UIScene extends Phaser.Scene {
       this.toast.setPosition(pos.x, pos.y);
     }
 
+    this.layoutAction();
     this.overlay?.layout(w, h);
+  }
+
+  // ----- Action button (Level 04 dimension switch) -----
+
+  private onActionState(info: ActionInfo | null): void {
+    if (!info) {
+      this.actionBtn?.setVisible(false);
+      this.actionTip?.destroy();
+      this.actionTip = null;
+      this.actionMode = null;
+      return;
+    }
+    if (!this.actionBtn) this.createActionButton();
+    // The first real switch means the player found the button: the tip can go.
+    if (this.actionMode && this.actionMode !== info.mode && !actionTaught) {
+      actionTaught = true;
+      this.hideActionTip();
+    }
+    this.actionMode = info.mode;
+    this.actionBtn!.setVisible(true);
+    this.drawActionRing(info.mode);
+    if (!actionTaught && !this.actionTip) this.showActionTip();
+    this.layoutAction();
+  }
+
+  /**
+   * A round button left of the jump pad. It reacts on press (not release) and lives in its own
+   * pointer slot, so a thumb can hold a direction while the other taps it.
+   */
+  private createActionButton(): void {
+    const ring = this.add.graphics();
+    const icon = this.add.image(0, 0, 'icon_dimension').setDisplaySize(40, 40);
+    const children: Phaser.GameObjects.GameObject[] = [ring, icon];
+    if (!this.isTouch) {
+      const key = this.add.text(0, ACTION_R + 12, 'X / Shift', textStyle(12, '#ffffff', { stroke: '#4a3346', strokeThickness: 3 })).setOrigin(0.5);
+      children.push(key);
+    }
+    const btn = this.add.container(0, 0, children).setDepth(6);
+    btn.setSize(ACTION_R * 2, ACTION_R * 2);
+    btn.setInteractive(new Phaser.Geom.Circle(ACTION_R, ACTION_R, ACTION_R + 6), Phaser.Geom.Circle.Contains);
+    btn.on('pointerdown', () => {
+      this.game_.controls?.queueAction();
+      this.tweens.killTweensOf(btn);
+      btn.setScale(this.u * 0.88);
+      this.tweens.add({ targets: btn, scale: this.u, duration: 140, ease: 'Back.easeOut' });
+    });
+    this.actionBtn = btn;
+    this.actionRing = ring;
+  }
+
+  private drawActionRing(mode: ActionInfo['mode']): void {
+    const g = this.actionRing;
+    if (!g) return;
+    // Shows the dimension you switch TO.
+    const next = mode === 'sweet' ? DIM_TINT.glitch : DIM_TINT.sweet;
+    g.clear();
+    g.fillStyle(TONES.ink, 0.3);
+    g.fillCircle(0, 0, ACTION_R);
+    g.fillStyle(next, 0.55);
+    g.fillCircle(0, 0, ACTION_R - 6);
+    g.lineStyle(3, 0xffffff, 0.95);
+    g.strokeCircle(0, 0, ACTION_R);
+    g.lineStyle(1.5, TONES.ink, 0.35);
+    g.strokeCircle(0, 0, ACTION_R + 2);
+  }
+
+  private showActionTip(): void {
+    const text = this.isTouch ? 'Ketuk ✦ untuk pindah dimensi!' : 'Tekan X / Shift untuk pindah dimensi!';
+    const msg = this.add.text(0, 0, text, textStyle(14, TONES.inkCss, { align: 'center' })).setOrigin(0.5);
+    const w = msg.width + 24;
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.cream, 0.96);
+    bg.fillRoundedRect(-w / 2, -17, w, 34, 17);
+    bg.lineStyle(2, PALETTE.lavender, 1);
+    bg.strokeRoundedRect(-w / 2, -17, w, 34, 17);
+    this.actionTip = this.add.container(0, 0, [bg, msg]).setDepth(7);
+    this.tweens.add({ targets: this.actionTip, alpha: { from: 1, to: 0.75 }, duration: 600, yoyo: true, repeat: -1 });
+  }
+
+  private hideActionTip(): void {
+    const tip = this.actionTip;
+    if (!tip) return;
+    this.actionTip = null;
+    this.tweens.killTweensOf(tip);
+    this.tweens.add({ targets: tip, alpha: 0, duration: 250, onComplete: () => tip.destroy() });
+  }
+
+  private layoutAction(): void {
+    if (!this.actionBtn) return;
+    const { width: w, height: h } = this.scale;
+    const inset = getSafeArea();
+    const u = this.u;
+    const right = w - inset.right - 10 * u;
+    const padY = h - inset.bottom - 44 * u;
+    // Touch: left of the jump pad, same height. Keyboard: bottom-right corner.
+    const x = this.isTouch ? right - 46 * u - 96 * u : right - 46 * u;
+    const y = this.isTouch ? padY : padY - 10 * u;
+    this.actionBtn.setScale(u).setPosition(x, y);
+    if (this.actionTip) {
+      // Beside the button, over the ground strip: never over the path ahead.
+      const tipW = (this.actionTip.list[1] as Phaser.GameObjects.Text).width + 24;
+      this.actionTip.setScale(u).setPosition(x - (ACTION_R + 10 + tipW / 2) * u, y);
+    }
   }
 
   /**
