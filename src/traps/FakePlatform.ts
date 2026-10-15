@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLATFORM_PAD, platformTexture } from '../art/textures';
+import { platformArt } from '../art/textures';
 import { AudioManager } from '../managers/AudioManager';
 
 type FakeState = 'idle' | 'shaking' | 'fallen';
@@ -24,10 +24,10 @@ export class FakePlatform {
     private readonly delayMs: number,
   ) {
     // Image origin is its center so it can tilt while falling.
-    const tex = platformTexture(scene, w, h, true);
-    const frame = scene.textures.getFrame(tex);
-    this.home = new Phaser.Math.Vector2(x - PLATFORM_PAD.x + frame.width / 2, y - PLATFORM_PAD.y + frame.height / 2);
-    this.gfx = scene.add.image(this.home.x, this.home.y, tex).setDepth(10);
+    const art = platformArt(scene, w, h, true);
+    const frame = scene.textures.getFrame(art.key);
+    this.home = new Phaser.Math.Vector2(x - art.padX + frame.width / art.res / 2, y - art.padY + frame.height / art.res / 2);
+    this.gfx = scene.add.image(this.home.x, this.home.y, art.key).setScale(1 / art.res).setDepth(10);
     this.zone = scene.add.zone(x + w / 2, y + h / 2, w, h);
     scene.physics.add.existing(this.zone, true);
   }

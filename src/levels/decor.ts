@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
 import { sweetPropKey } from '../art/sweetTextures';
+import { PREMIUM_RES, hasPremium, premiumKey } from '../art/premium/premiumAssets';
 import { textStyle } from '../ui/text';
 import type { DecorDef } from './types';
+import type { SweetProp } from '../art/sweetTextures';
 
 /**
  * Builds level scenery: Level 03's lying signs and truth tells (mint sprouts on real ground, tiny
@@ -13,17 +15,19 @@ export function buildDecor(scene: Phaser.Scene, defs: DecorDef[]): void {
     const groundY = d.y * TILE;
     if (d.kind === 'prop') {
       // Behind the platforms (depth 10): the base tucks under the frosting, hazards stay on top.
+      const art = propArt(scene, d.prop);
       scene.add
-        .image(d.x * TILE, groundY + 6, sweetPropKey(d.prop))
+        .image(d.x * TILE, groundY + 6, art.key)
         .setOrigin(0.5, 1)
-        .setScale(d.scale ?? 1)
+        .setScale((d.scale ?? 1) / art.res)
         .setFlipX(!!d.flip)
         .setDepth(9);
       continue;
     }
     if (d.kind === 'floater') {
       // Far behind the action (below the ambient sparkles), with a gentle deterministic bob.
-      const img = scene.add.image(d.x * TILE, groundY, sweetPropKey(d.prop)).setScale(d.scale ?? 1).setDepth(3).setAlpha(0.95);
+      const art = propArt(scene, d.prop);
+      const img = scene.add.image(d.x * TILE, groundY, art.key).setScale((d.scale ?? 1) / art.res).setDepth(3).setAlpha(0.95);
       scene.tweens.add({ targets: img, y: groundY - 7, angle: { from: -6, to: 6 }, duration: 1700 + ((d.x * 97) % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       continue;
     }
@@ -47,4 +51,10 @@ export function buildDecor(scene: Phaser.Scene, defs: DecorDef[]): void {
         .setDepth(13);
     }
   }
+}
+
+/** Premium prop image when installed (drawn at PREMIUM_RES), otherwise the procedural placeholder. */
+function propArt(scene: Phaser.Scene, prop: SweetProp): { key: string; res: number } {
+  const id = `prop_${prop}`;
+  return hasPremium(scene, id) ? { key: premiumKey(id), res: PREMIUM_RES } : { key: sweetPropKey(prop), res: 1 };
 }

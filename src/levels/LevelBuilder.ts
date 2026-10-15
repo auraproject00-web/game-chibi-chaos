@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { TILE } from '../config';
-import { PLATFORM_PAD, platformTexture, setPlatformTheme } from '../art/textures';
+import { platformArt, setPlatformTheme } from '../art/textures';
 import { ensureSweetTextures } from '../art/sweetTextures';
+import { bakePremiumHazards } from '../art/premium/premiumAssets';
 import { Checkpoint } from '../entities/Checkpoint';
 import { FinishPortal } from '../entities/FinishPortal';
 import { SpikeTrap } from '../traps/SpikeTrap';
@@ -30,16 +31,22 @@ export function buildLevel(scene: Phaser.Scene, data: LevelData, touchHints: boo
   const solids = scene.physics.add.staticGroup();
   // Platforms (and fake floors) baked below use this level's look.
   setPlatformTheme(data.theme ?? 'meadow');
-  if (data.theme === 'sweet') ensureSweetTextures(scene);
+  if (data.theme === 'sweet') {
+    ensureSweetTextures(scene);
+    bakePremiumHazards(scene);
+  }
 
   for (const r of data.solids) {
     const x = r.x * TILE;
     const y = r.y * TILE;
     const w = r.w * TILE;
     const h = r.h * TILE;
+    // Visual only: the collision is the zone below, whatever the art looks like.
+    const art = platformArt(scene, w, h);
     scene.add
-      .image(x - PLATFORM_PAD.x, y - PLATFORM_PAD.y, platformTexture(scene, w, h))
+      .image(x - art.padX, y - art.padY, art.key)
       .setOrigin(0)
+      .setScale(1 / art.res)
       .setDepth(10);
     const zone = scene.add.zone(x + w / 2, y + h / 2, w, h);
     solids.add(zone);

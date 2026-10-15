@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { generateTextures } from '../art/textures';
+import { readPremiumPack } from '../art/premium/premiumAssets';
 import { textStyle } from '../ui/text';
 
 /** Builds placeholder textures and waits (briefly) for the web font before showing the menu. */
@@ -12,7 +13,8 @@ export class BootScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.add.text(width / 2, height / 2, 'Loading...', textStyle(28, '#ffffff')).setOrigin(0.5);
     generateTextures(this);
-    void waitForFont().then(() => {
+    // The premium art list is read alongside the font wait; with no pack the placeholders stay.
+    void Promise.all([waitForFont(), readPremiumPack()]).then(() => {
       this.scene.launch('Background');
       const params = new URLSearchParams(location.search);
       if (import.meta.env.DEV && params.has('traplab')) {

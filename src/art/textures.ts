@@ -4,6 +4,7 @@ import { generateMochiTextures } from './mochi';
 import { drawDimensionPlatform, generateDimensionTextures } from './dimensionTextures';
 import { generateIllusionTextures } from './illusionTextures';
 import { drawSweetPlatform } from './sweetTextures';
+import { premiumPlatform, type PlatformArt } from './premium/premiumPlatforms';
 import type { LevelTheme } from '../levels/types';
 
 /**
@@ -240,7 +241,9 @@ export function setPlatformTheme(theme: LevelTheme): void {
  */
 export function themedKey(scene: Phaser.Scene, base: string): string {
   const key = `${base}_${platformTheme}`;
-  return platformTheme !== 'meadow' && scene.textures.exists(key) ? key : base;
+  if (platformTheme === 'meadow' || !scene.textures.exists(key)) return base;
+  // Premium art baked to the placeholder's size (see bakePremiumHazards) wins when installed.
+  return scene.textures.exists(`${key}_premium`) ? `${key}_premium` : key;
 }
 
 /** Pixels of padding around a baked platform texture (grass cap and flowers overhang the box). */
@@ -264,6 +267,18 @@ export function platformTexture(scene: Phaser.Scene, w: number, h: number, crack
     });
   }
   return key;
+}
+
+/**
+ * The art for a platform of this size and where it goes relative to the collision box. Level 01
+ * uses the premium tilesets when they are installed; everything else is the baked placeholder.
+ */
+export function platformArt(scene: Phaser.Scene, w: number, h: number, cracked = false): PlatformArt {
+  if (platformTheme === 'sweet') {
+    const premium = premiumPlatform(scene, w, h, cracked);
+    if (premium) return premium;
+  }
+  return { key: platformTexture(scene, w, h, cracked), res: 1, padX: PLATFORM_PAD.x, padY: PLATFORM_PAD.y };
 }
 
 /** Height in px of a moving-platform wafer. */

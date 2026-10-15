@@ -24,6 +24,7 @@ import { TutorialManager } from '../managers/TutorialManager';
 import { TRAP_DATA_KEY, type ActionInfo, type Trap, type TrapContext } from '../traps/types';
 import { isPortraitTouch } from '../ui/safeArea';
 import type { BackgroundScene } from './BackgroundScene';
+import { queuePremiumImages } from '../art/premium/premiumAssets';
 
 type PlayState = 'playing' | 'dead' | 'complete';
 
@@ -96,6 +97,11 @@ export class GameScene extends Phaser.Scene {
 
   get actionInfo(): ActionInfo | null {
     return this.action;
+  }
+
+  /** Level 01 loads its premium art (when installed) before building; other levels load nothing. */
+  preload(): void {
+    if (getLevel(this.levelId)?.theme === 'sweet') queuePremiumImages(this);
   }
 
   create(): void {

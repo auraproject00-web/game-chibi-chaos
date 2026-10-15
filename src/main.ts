@@ -4,6 +4,7 @@ import { AudioManager } from './managers/AudioManager';
 import { EventBus, GameEvents } from './managers/EventBus';
 import { BackgroundScene } from './scenes/BackgroundScene';
 import { BootScene } from './scenes/BootScene';
+import { ForegroundScene } from './scenes/ForegroundScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
@@ -32,8 +33,9 @@ const config: Phaser.Types.Core.GameConfig = {
     antialias: true,
     roundPixels: false,
   },
-  // Order matters: Background renders below everything, UI on top.
-  scene: [BootScene, BackgroundScene, MenuScene, LevelSelectScene, GameScene, UIScene],
+  // Order matters: Background renders below everything, then the level, the optional
+  // premium foreground layer, and the UI on top.
+  scene: [BootScene, BackgroundScene, MenuScene, LevelSelectScene, GameScene, ForegroundScene, UIScene],
 };
 
 const game = new Phaser.Game(config);
